@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800&display=swap');
+
 * {
     margin: 0;
     padding: 0;
@@ -31,20 +33,15 @@ html, body, #root {
   color: rgb(0, 0, 0);
 }
 
-.App-link {
-  color: #61dafb;
-}
-
 .login-background {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-image: url('./background.jpg');
   background-position: center;
   background-repeat: repeat;
-  background-size: auto;
+  background-size: auto;  
   display: flex;
   justify-content: center;
   align-items: center;
@@ -67,12 +64,15 @@ html, body, #root {
 }
 
 .titulo {
-  font-weight: bold;
+  font-family: 'Nunito Sans', sans-serif;
+  font-weight: 900;
   margin-bottom: 24px;
   font-size: 28px;
+  color: #333;
 }
 
 .input {
+  font-family: 'Nunito Sans', sans-serif;
   width: 100%;
   padding: 14px;
   margin-bottom: 18px;
@@ -82,16 +82,61 @@ html, body, #root {
   font-size: 16px;
 }
 
+.input:focus {
+  outline: none;
+  border-color: #1976d2;
+}
+
+.input:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+}
+
 .entrar {
+  font-family: 'Nunito Sans', sans-serif;
   width: 100%;
   padding: 14px;
   background: #1976d2;
   color: #fff;
   border: none;
   border-radius: 8px;
-  font-weight: bold;
-  font-size: 20px;
+  font-weight: lighter;
   cursor: pointer;
   box-sizing: border-box;
+  font-size: 20px;
+}
+
+.entrar:hover:not(:disabled) {
+  background: #1565c0;
+}
+
+.entrar:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.error-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #f44336;
+  color: white;
+  padding: 15px 20px;
+  border-radius: 8px;
   font-size: 16px;
+  z-index: 1000;
+  animation: slideIn 0.4s ease-out;
+  box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+  border-left: 4px solid #d32f2f;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
