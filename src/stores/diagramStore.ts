@@ -124,19 +124,43 @@ export const useDiagramStore = create<DiagramState & DiagramActions>((set, get) 
   },
   
   onConnect: (connection) => {
+    const { source, target, sourceHandle, targetHandle } = connection;
+    
+    if (!source || !target) return;
+    
+    // Verificar se já existe uma conexão entre os mesmos nós
+    const existingEdgeIndex = get().edges.findIndex(edge => 
+      (edge.source === source && edge.target === target) ||
+      (edge.source === target && edge.target === source)
+    );
+    
     const newEdge: Edge = {
-      id: `e${connection.source}-${connection.target}-${Date.now()}`,
-      source: connection.source!,
-      target: connection.target!,
-      sourceHandle: connection.sourceHandle,
-      targetHandle: connection.targetHandle,
+      id: `e${source}-${target}-${Date.now()}`,
+      source: source,
+      target: target,
+      sourceHandle: sourceHandle,
+      targetHandle: targetHandle,
       type: 'smoothstep',
       animated: true,
       style: { stroke: '#2196f3', strokeWidth: 3 }
     };
     
+    let updatedEdges = get().edges;
+    
+    if (existingEdgeIndex !== -1) {
+      // Substituir a conexão existente pela nova (novo posicionamento)
+      updatedEdges = [
+        ...updatedEdges.slice(0, existingEdgeIndex),
+        newEdge,
+        ...updatedEdges.slice(existingEdgeIndex + 1)
+      ];
+    } else {
+      // Adicionar nova conexão
+      updatedEdges = addEdge(newEdge, updatedEdges);
+    }
+    
     set({
-      edges: addEdge(newEdge, get().edges),
+      edges: updatedEdges,
       isConnecting: false,
       connectionMode: false
     });

@@ -11,6 +11,7 @@ import {
   Panel,
   SelectionMode,
   ReactFlowProvider,
+  useReactFlow,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -23,6 +24,7 @@ const nodeTypes = {
 };
 
 function DiagramFlow() {
+  const reactFlowInstance = useReactFlow();
   const {
     nodes,
     edges,
@@ -33,6 +35,7 @@ function DiagramFlow() {
     onConnect,
     addNode,
     setSelectedElements,
+    setCurrentTool,
   } = useDiagramStore();
 
   const handleNodesChange = useCallback(
@@ -59,15 +62,26 @@ function DiagramFlow() {
   const handlePaneClick = useCallback(
     (event: React.MouseEvent) => {
       if (currentTool === 'add-table') {
-        const rect = (event.target as Element).getBoundingClientRect();
-        const position = {
-          x: event.clientX - rect.left - 150,
-          y: event.clientY - rect.top - 100,
+        // Usar screenToFlowPosition para converter coordenadas da tela para o canvas
+        const position = reactFlowInstance.screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
+        });
+        
+        // Aplicar offset fixo para centralizar (valores definidos pelo usuário)
+        const finalPosition = {
+          x: position.x - 100, // Offset X fixo
+          y: position.y - 55,  // Offset Y fixo
         };
-        addNode(position);
+        
+        // Adicionar a nova tabela
+        addNode(finalPosition);
+        
+        // Voltar automaticamente para o modo selecionar
+        setCurrentTool('select');
       }
     },
-    [currentTool, addNode]
+    [currentTool, addNode, setCurrentTool, reactFlowInstance]
   );
 
   const handleSelectionChange = useCallback(
