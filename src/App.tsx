@@ -14,7 +14,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import { useDiagramStore } from './stores/diagramStore';
+import { useDiagramStore, type C4Node } from './stores/diagramStore';
 import { C4NodeComponent } from './components/C4Node';
 import { Toolbar } from './components/Toolbar';
 
@@ -71,7 +71,7 @@ function DiagramFlow() {
   );
 
   const handleSelectionChange = useCallback(
-    ({ nodes: selectedNodes }: { nodes: any[] }) => {
+    ({ nodes: selectedNodes }: { nodes: C4Node[] }) => {
       setSelectedElements(selectedNodes.map(node => node.id));
     },
     [setSelectedElements]
