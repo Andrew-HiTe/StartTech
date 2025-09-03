@@ -27,6 +27,7 @@ export interface DiagramState {
   isConnecting: boolean;
   connectionMode: boolean;
   currentTool: 'select' | 'add-table' | 'connect';
+  diagramName: string;
 }
 
 export interface DiagramActions {
@@ -44,6 +45,11 @@ export interface DiagramActions {
   setConnectionMode: (mode: boolean) => void;
   updateNodeData: (nodeId: string, data: Partial<C4NodeData>) => void;
   exportDiagram: () => void;
+  setDiagramName: (name: string) => void;
+  // Integration methods
+  loadDiagramData: (nodes: C4Node[], edges: Edge[]) => void;
+  getCurrentDiagramData: () => { nodes: C4Node[]; edges: Edge[] };
+  clearDiagram: () => void;
 }
 
 export const useDiagramStore = create<DiagramState & DiagramActions>((set, get) => ({
@@ -106,6 +112,7 @@ export const useDiagramStore = create<DiagramState & DiagramActions>((set, get) 
   isConnecting: false,
   connectionMode: false,
   currentTool: 'select',
+  diagramName: 'Novo Diagrama C4',
 
   // Actions
   setNodes: (nodes) => set({ nodes }),
@@ -233,5 +240,31 @@ export const useDiagramStore = create<DiagramState & DiagramActions>((set, get) 
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', exportFileDefaultName);
     linkElement.click();
+  },
+
+  setDiagramName: (name) => set({ diagramName: name }),
+
+  // Integration with DiagramManager
+  loadDiagramData: (nodes: C4Node[], edges: Edge[]) => {
+    set({ 
+      nodes: nodes || [], 
+      edges: edges || [],
+      selectedElements: [],
+      currentTool: 'select'
+    });
+  },
+
+  getCurrentDiagramData: () => {
+    const { nodes, edges } = get();
+    return { nodes, edges };
+  },
+
+  clearDiagram: () => {
+    set({
+      nodes: [],
+      edges: [],
+      selectedElements: [],
+      currentTool: 'select'
+    });
   }
 }));
