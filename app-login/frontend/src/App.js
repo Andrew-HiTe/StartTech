@@ -1,6 +1,7 @@
 import './App.css';
 import logo from './logo.png';
 import { useState } from 'react';
+import Home from './pager/Home';
 
 function App() {
   const [email, setEmail] = useState('');
@@ -13,22 +14,22 @@ function App() {
       body: JSON.stringify({ email, senha }),
       headers: { 'Content-Type': 'application/json' }
     })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        window.location.href = '/dashboard'; // Coloca o link da pag. aqui
-      } else {
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          window.location.href = '/dashboard'; // Coloca o link da pag. aqui
+        } else {
+          setLoginErro(true);
+          setSenha('');
+          setTimeout(() => setLoginErro(false), 3000);
+        }
+      })
+      .catch(error => {
+        console.error('Erro:', error);
         setLoginErro(true);
         setSenha('');
         setTimeout(() => setLoginErro(false), 3000);
-      }
-    })
-    .catch(error => {
-      console.error('Erro:', error);
-      setLoginErro(true);
-      setSenha('');
-      setTimeout(() => setLoginErro(false), 3000);
-    });
+      });
   };
 
   const handleKeyPress = (e) => {
@@ -39,6 +40,7 @@ function App() {
 
   return (
     <div className="App">
+      <Home imagem={logo} />
       <header className="App-header">
         {loginErro && (
           <div style={{

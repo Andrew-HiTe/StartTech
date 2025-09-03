@@ -1,0 +1,50 @@
+.funcionalidades {
+  padding: 80px 60px;
+  background-color: #f9f9f9;
+  text-align: center;
+}
+
+.funcionalidades h2 {
+  font-size: 2rem;
+  margin-bottom: 40px;
+  font-weight: bold;
+}
+
+.funcionalidades-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 30px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.funcionalidade-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 25px;
+  text-align: left;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.funcionalidade-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+}
+
+.funcionalidade-card .icon {
+  font-size: 2rem;
+  margin-bottom: 15px;
+}
+
+.funcionalidade-card h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.funcionalidade-card p {
+  font-size: 0.95rem;
+  color: #555;
+  line-height: 1.4;
+}

@@ -1,0 +1,40 @@
+.texthome {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 100vh;
+  padding-left: 80px;
+}
+
+.texthome-content {
+  max-width: 700px;
+  text-align: left;
+}
+
+.texthome h1 {
+  font-size: 3rem;
+  font-weight: bold;
+  margin-bottom: 15px;
+}
+
+.texthome p {
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.texthome-diagrama{
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.texthome-diagrama:hover {
+  transform: translateY(-5px);
+}
+
+.texthome-diagrama img{
+  width: 70%;
+  height: auto;
+  border-radius: 25px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
