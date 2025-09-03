@@ -42,13 +42,6 @@ export const Toolbar: React.FC = () => {
       icon: '📊',
       active: currentTool === 'add-table',
       description: 'Clique no canvas para adicionar'
-    },
-    {
-      id: 'connect' as const,
-      label: 'Conectar',
-      icon: '🔗',
-      active: currentTool === 'connect',
-      description: 'Arraste pelos pontos azuis'
     }
   ];
 

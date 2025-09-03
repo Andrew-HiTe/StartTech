@@ -1,8 +1,17 @@
 <!-- Use this file to provide workspace-specific custom instructions to Copilot. For more details, visit https://code.visualstudio.com/docs/copilot/copilot-customization#_use-a-githubcopilotinstructionsmd-file -->
-- [x] Verify that the copilot-instructions.md file in the .github directory is created.
 
+## Instruções para Copilot
+
+Para acelerar o processamento, melhorar a agilidade e o tratamento de erros, utilize os arquivos presentes na pasta `docs/` como referência:
+
+- `ERROR_HANDLING_GUIDE.md`: Siga as práticas recomendadas de tratamento de erros descritas neste arquivo.
+- `QUICK_CHECKS.md`: Consulte este arquivo para realizar verificações rápidas e garantir respostas mais ágeis.
+- `PROJECT_CONTEXT.md`: Use este arquivo para entender o contexto do projeto e tomar decisões mais informadas.
+- `TEMPLATES.md`: Utilize os templates para padronizar respostas e acelerar o desenvolvimento.
+- `CONTEXT.md`: Consulte para obter informações adicionais sobre o contexto geral do projeto.
+
+Sempre que possível, priorize o uso dessas referências para otimizar o raciocínio e a entrega de soluções.
 - [x] Clarify Project Requirements
-	<!-- React TypeScript application for C4 diagrams with hybrid mouse functionality, React Flow, Zustand, Tailwind CSS -->
 
 - [x] Scaffold the Project
 	<!-- Vite React TypeScript project created successfully -->

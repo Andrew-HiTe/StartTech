@@ -26,7 +26,7 @@ export interface DiagramState {
   selectedElements: string[];
   isConnecting: boolean;
   connectionMode: boolean;
-  currentTool: 'select' | 'add-table' | 'connect';
+  currentTool: 'select' | 'add-table';
   diagramName: string;
 }
 
@@ -40,7 +40,7 @@ export interface DiagramActions {
   deleteNode: (nodeId: string) => void;
   deleteEdge: (edgeId: string) => void;
   setSelectedElements: (elements: string[]) => void;
-  setCurrentTool: (tool: 'select' | 'add-table' | 'connect') => void;
+  setCurrentTool: (tool: 'select' | 'add-table') => void;
   setIsConnecting: (connecting: boolean) => void;
   setConnectionMode: (mode: boolean) => void;
   updateNodeData: (nodeId: string, data: Partial<C4NodeData>) => void;
@@ -210,7 +210,7 @@ export const useDiagramStore = create<DiagramState & DiagramActions>((set, get) 
   
   setCurrentTool: (tool) => set({ 
     currentTool: tool,
-    connectionMode: tool === 'connect',
+    connectionMode: false,
     isConnecting: false 
   }),
   

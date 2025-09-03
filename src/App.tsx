@@ -38,7 +38,6 @@ function DiagramFlow({ isSidebarMinimized, setIsSidebarMinimized }: {
     nodes,
     edges,
     currentTool,
-    connectionMode,
     diagramName,
     onNodesChange,
     onEdgesChange,
@@ -157,8 +156,6 @@ function DiagramFlow({ isSidebarMinimized, setIsSidebarMinimized }: {
             className={
               currentTool === 'add-table' 
                 ? 'cursor-crosshair' 
-                : connectionMode 
-                ? 'cursor-alias' 
                 : 'cursor-default'
             }
           >
@@ -179,19 +176,6 @@ function DiagramFlow({ isSidebarMinimized, setIsSidebarMinimized }: {
             
             <Panel position="top-center">
               <Toolbar />
-            </Panel>
-
-            {/* Indicador do Diagrama Ativo */}
-            <Panel position="top-left" className="bg-white px-3 py-2 rounded-lg shadow-md border border-gray-200">
-              <div className="flex items-center gap-2 text-sm">
-                <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                <span className="font-medium text-gray-700">
-                  {getCurrentDiagram()?.name || 'Nenhum diagrama selecionado'}
-                </span>
-                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                  {getCurrentDiagram()?.type?.toUpperCase() || ''}
-                </span>
-              </div>
             </Panel>
 
             <Panel position="top-right" className="bg-white p-4 rounded-lg shadow-lg border">
