@@ -153,6 +153,7 @@ function DiagramFlow({ isSidebarMinimized, setIsSidebarMinimized }: {
             multiSelectionKeyCode="Shift"
             deleteKeyCode="Delete"
             proOptions={proOptions}
+            connectionLineComponent={undefined} // Preview da conexão ativado
             className={
               currentTool === 'add-table' 
                 ? 'cursor-crosshair' 
