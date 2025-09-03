@@ -1,5 +1,8 @@
 import './App.css';
-import logo from './logo.png';
+import Home from './pager/Home';
+import homelogo from './imagens/homelogo.png'
+import diagrama from './imagens/diagrama.jpg'
+import LoginForm from './components/loginForm'
 import { useState } from 'react';
 
 function App() {
@@ -39,7 +42,6 @@ function App() {
 
   return (
     <div className="App">
-      <Home imagem={logo} />
       <header className="App-header">
         <div 
           className="login-background"
@@ -50,6 +52,7 @@ function App() {
           <LoginForm />
         </div>
       </header>
+      <Home imagem={homelogo} diag={diagrama}/>
     </div>
   );
 }

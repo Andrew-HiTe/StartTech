@@ -11,7 +11,7 @@ const Text = (props) => {
             <Buttons nameButton="Comece já"/>
             </div>
             <div className='texthome-diagrama'>
-                <img src='./imagens/diagrama.jpg'/>
+                <img src={props.diagrama}/>
             </div>
         </section>
 
