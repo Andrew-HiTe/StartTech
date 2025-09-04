@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800&display=swap');
+
 * {
     margin: 0;
     padding: 0;
@@ -9,8 +11,7 @@ html, body, #root {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  overflow-x: hidden;  /* impede só scroll lateral */
-  overflow-y: auto;    /* permite rolar pra baixo */
+  overflow: hidden;
 }
 
 .App {
@@ -138,8 +139,4 @@ html, body, #root {
     transform: translateX(0);
     opacity: 1;
   }
-}
-
-body {
-  font-family: 'Nunito Sans', sans-serif;
 }

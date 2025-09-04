@@ -1,3 +1,9 @@
+/**
+ * Configuração da conexão com o banco de dados MySQL
+ * Estabelece a conexão com o banco utilizando credenciais
+ * do arquivo .env ou valores padrão como fallback
+ */
+
 const mysql = require('mysql2');
 
 // Carrega variáveis de ambiente se o dotenv estiver disponível

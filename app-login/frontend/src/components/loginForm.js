@@ -1,11 +1,23 @@
+/**
+ * Componente de formulário de login
+ * Gerencia a interface de autenticação com campos de email e senha,
+ * validações locais e integração com o hook de autenticação
+ */
+
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 
+/**
+ * Componente que renderiza o formulário de login com validações
+ */
 function LoginForm() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const { login, loading, error, showError } = useAuth();
 
+  /**
+   * Manipula o processo de login com validações locais
+   */
   const handleLogin = async () => {
     // Validação local
     if (!email || !senha) {
@@ -27,6 +39,9 @@ function LoginForm() {
     }
   };
 
+  /**
+   * Manipula evento de tecla pressionada para permitir login com Enter
+   */
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !loading) {
       handleLogin();

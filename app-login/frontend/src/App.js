@@ -1,3 +1,9 @@
+/**
+ * Componente principal da aplicação React
+ * Renderiza a interface de login com background personalizado
+ * e estrutura o layout principal da aplicação
+ */
+
 import './App.css';
 import Home from './pager/Home';
 import homelogo from './imagens/homelogo.png'
@@ -5,6 +11,9 @@ import diagrama from './imagens/diagrama.jpg'
 import LoginForm from './components/loginForm'
 import { useState } from 'react';
 
+/**
+ * Componente raiz que estrutura a aplicação com formulário de login
+ */
 function App() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
