@@ -1,47 +1,42 @@
 /**
  * Componente de formulário de login
- * Gerencia a interface de autenticação com campos de email e senha,
- * validações locais e integração com o hook de autenticação
+ * Interface simples de autenticação com campos de email e senha
  */
 
 import React, { useState } from 'react';
-import { useAuth } from '../hooks/useAuth';
 
 /**
- * Componente que renderiza o formulário de login com validações
+ * Componente que renderiza o formulário de login
  */
 function LoginForm() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
-  const { login, loading, error, showError } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   /**
-   * Manipula o processo de login com validações locais
+   * Manipula o processo de login
    */
-  const handleLogin = async () => {
-    // Validação local
+  const handleLogin = () => {
     if (!email || !senha) {
-      showError('Email e senha são obrigatórios');
+      setError('Email e senha são obrigatórios');
       return;
     }
 
     if (!email.includes('@')) {
-      showError('Por favor, digite um email válido');
+      setError('Por favor, digite um email válido');
       return;
     }
 
-    const result = await login(email, senha);
+    setLoading(true);
+    setError('');
     
-    if (result.success) {
-      window.location.href = '/dashboard'; // redirect
-    } else {
-      setSenha(''); // Limpa apenas a senha
-    }
+    setTimeout(() => {
+      setLoading(false);
+      console.log('Login realizado:', { email, senha });
+    }, 1000);
   };
 
-  /**
-   * Manipula evento de tecla pressionada para permitir login com Enter
-   */
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !loading) {
       handleLogin();

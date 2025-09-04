@@ -1,7 +1,6 @@
 /**
  * Componente principal da aplicação React
- * Renderiza a interface de login com background personalizado
- * e estrutura o layout principal da aplicação
+ * Renderiza primeiro a Home e depois o Login quando necessário
  */
 
 import './App.css';
@@ -11,57 +10,36 @@ import diagrama from './imagens/diagrama.jpg'
 import LoginForm from './components/loginForm'
 import { useState } from 'react';
 
-/**
- * Componente raiz que estrutura a aplicação com formulário de login
- */
 function App() {
-  const [email, setEmail] = useState('');
-  const [senha, setSenha] = useState('');
-  const [loginErro, setLoginErro] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
 
-  const handleLogin = () => {
-    fetch('http://localhost:5000/api/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, senha }),
-      headers: { 'Content-Type': 'application/json' }
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        window.location.href = '/dashboard'; // Coloca o link da pag. aqui
-      } else {
-        setLoginErro(true);
-        setSenha('');
-        setTimeout(() => setLoginErro(false), 3000);
-      }
-    })
-    .catch(error => {
-      console.error('Erro:', error);
-      setLoginErro(true);
-      setSenha('');
-      setTimeout(() => setLoginErro(false), 3000);
-    });
+  // Função para mostrar a tela de login
+  const handleShowLogin = () => {
+    setShowLogin(true);
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      handleLogin();
-    }
-  };
+  // Se showLogin for true, renderiza a tela de login
+  if (showLogin) {
+    return (
+      <div className="App">
+        <header className="App-header">
+          <div 
+            className="login-background"
+            style={{
+              backgroundImage: `url(${process.env.PUBLIC_URL}/background.jpg)`
+            }}
+          >
+            <LoginForm />
+          </div>
+        </header>
+      </div>
+    );
+  }
 
+  // Por padrão, renderiza a página Home
   return (
     <div className="App">
-      <header className="App-header">
-        <div 
-          className="login-background"
-          style={{
-            backgroundImage: `url(${process.env.PUBLIC_URL}/background.jpg)`
-          }}
-        >
-          <LoginForm />
-        </div>
-      </header>
-      <Home imagem={homelogo} diag={diagrama}/>
+      <Home imagem={homelogo} diag={diagrama} onShowLogin={handleShowLogin} />
     </div>
   );
 }

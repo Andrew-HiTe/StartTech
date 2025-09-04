@@ -3,6 +3,7 @@
 * {
     margin: 0;
     padding: 0;
+    font-family: 'Nunito Sans', sans-serif;
 }
 
 html, body, #root {
@@ -11,7 +12,8 @@ html, body, #root {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  overflow: hidden;
+  overflow: auto;
+  font-family: 'Nunito Sans', sans-serif;
 }
 
 .App {
