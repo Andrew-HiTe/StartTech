@@ -1,0 +1,29 @@
+.button button{
+    color: #ffffff;
+    border-radius: 8px;
+    border: none;
+    font-size: 1.2rem;
+    width: auto;
+    height: auto;
+    padding: 12px 24px;
+    cursor: pointer;
+
+    border: 4px solid transparent;
+    background:
+    linear-gradient(#002233, #002233) padding-box, /* fundo do card */
+    linear-gradient(
+      90deg,
+      rgba(0, 255, 212, 1) 0%,
+      rgba(164, 77, 255, 1) 50%,
+      rgba(4, 87, 167, 1) 100%) border-box; /* gradiente aplicado na borda */
+}
+
+.button button:hover{
+    background:
+    linear-gradient(
+      90deg,
+      rgba(0, 255, 212, 1) 0%,
+      rgba(164, 77, 255, 1) 50%,
+      rgba(4, 87, 167, 1) 100%) border-box; /* gradiente aplicado na borda */    
+      color: #FFFFFF;
+}
