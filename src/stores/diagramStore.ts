@@ -142,38 +142,49 @@ export const useDiagramStore = create<DiagramState & DiagramActions>((set, get) 
   onConnect: (connection) => {
     const { source, target, sourceHandle, targetHandle } = connection;
     
-    if (!source || !target) return;
+    // Validações mais rigorosas
+    if (!source || !target || source === target) {
+      console.log('❌ Conexão inválida:', { source, target, sourceHandle, targetHandle });
+      return;
+    }
     
-    // Verificar se já existe uma conexão entre os mesmos nós
-    const existingEdgeIndex = get().edges.findIndex(edge => 
-      (edge.source === source && edge.target === target) ||
-      (edge.source === target && edge.target === source)
+    console.log('🔄 Processando conexão:', { source, target, sourceHandle, targetHandle });
+    
+    // Verificar se já existe uma conexão entre os mesmos nós e handles específicos
+    const existingEdge = get().edges.find(edge => 
+      edge.source === source && 
+      edge.target === target &&
+      edge.sourceHandle === sourceHandle &&
+      edge.targetHandle === targetHandle
     );
     
+    if (existingEdge) {
+      console.log('⚠️ Conexão já existe, ignorando');
+      return;
+    }
+    
     const newEdge: Edge = {
-      id: `e${source}-${target}-${Date.now()}`,
+      id: `e${source}-${target}-${sourceHandle || 'auto'}-${targetHandle || 'auto'}-${Date.now()}`,
       source: source,
       target: target,
-      sourceHandle: sourceHandle,
-      targetHandle: targetHandle,
+      sourceHandle: sourceHandle || undefined,
+      targetHandle: targetHandle || undefined,
       type: 'smoothstep',
-      animated: false, // Desabilitar animação para melhor performance
-      style: { stroke: '#2196f3', strokeWidth: 3 }
+      animated: false,
+      style: { stroke: '#2196f3', strokeWidth: 3 },
+      markerEnd: {
+        type: 'arrowclosed',
+        width: 20,
+        height: 20,
+        color: '#2196f3'
+      }
     };
     
-    let updatedEdges = get().edges;
+    // Usar a função addEdge do ReactFlow para garantir compatibilidade
+    const updatedEdges = addEdge(newEdge, get().edges);
     
-    if (existingEdgeIndex !== -1) {
-      // Substituir a conexão existente pela nova (novo posicionamento)
-      updatedEdges = [
-        ...updatedEdges.slice(0, existingEdgeIndex),
-        newEdge,
-        ...updatedEdges.slice(existingEdgeIndex + 1)
-      ];
-    } else {
-      // Adicionar nova conexão
-      updatedEdges = addEdge(newEdge, updatedEdges);
-    }
+    console.log('✅ Nova conexão criada:', newEdge);
+    console.log('📊 Total de conexões:', updatedEdges.length);
     
     set({
       edges: updatedEdges,

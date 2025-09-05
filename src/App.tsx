@@ -12,6 +12,7 @@ import {
   SelectionMode,
   ReactFlowProvider,
   useReactFlow,
+  ConnectionLineType,
 } from '@xyflow/react';
 
 import { useDiagramStore, type C4Node } from './stores/diagramStore';
@@ -81,6 +82,25 @@ function DiagramFlow({ isSidebarMinimized, setIsSidebarMinimized }: {
 
   const handleConnect = useCallback(
     (connection: Connection) => {
+      console.log('🔗 Tentando conectar:', {
+        source: connection.source,
+        target: connection.target,
+        sourceHandle: connection.sourceHandle,
+        targetHandle: connection.targetHandle
+      });
+      
+      // Validação adicional
+      if (!connection.source || !connection.target) {
+        console.warn('❌ Conexão inválida - source ou target ausente');
+        return;
+      }
+      
+      if (connection.source === connection.target) {
+        console.warn('❌ Conexão inválida - não é possível conectar nó a si mesmo');
+        return;
+      }
+      
+      console.log('✅ Conexão válida, enviando para store');
       onConnect(connection);
     },
     [onConnect]
@@ -295,8 +315,18 @@ function DiagramFlow({ isSidebarMinimized, setIsSidebarMinimized }: {
               snapGrid={[1, 1]}
               defaultEdgeOptions={{
                 type: 'smoothstep',
-                animated: false, // Desabilitar animação para melhor performance
+                animated: false,
                 style: { stroke: '#2196f3', strokeWidth: 3 },
+              }}
+              connectionRadius={30}
+              connectOnClick={false}
+              connectionLineType={ConnectionLineType.SmoothStep}
+              connectionLineStyle={{ stroke: '#2196f3', strokeWidth: 3, strokeDasharray: '5,5' }}
+              isValidConnection={(connection) => {
+                // Validar conexão antes de permitir
+                if (!connection.source || !connection.target) return false;
+                if (connection.source === connection.target) return false;
+                return true;
               }}
               panOnDrag={panOnDrag}
               selectionOnDrag={selectionOnDrag}

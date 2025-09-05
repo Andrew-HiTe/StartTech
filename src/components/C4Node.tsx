@@ -86,110 +86,127 @@ export const C4NodeComponent: React.FC<NodeProps> = ({
         />
       )}
 
-      {/* Connection Handles - Posicionados dinamicamente baseados no tamanho */}
+      {/* Connection Handles - Otimizados para melhor detecção */}
+      {/* Handles Source - Origem das conexões */}
       <Handle
         type="source"
         position={Position.Top}
         id="top"
-        className="w-3 h-3 bg-blue-500 border-2 border-white rounded-full hover:bg-blue-600 hover:scale-125"
+        className="w-4 h-4 bg-blue-500 border-2 border-white rounded-full hover:bg-blue-600 hover:scale-110 transition-all duration-200"
         style={{ 
-          top: '-6px', 
+          top: '-8px', 
           left: '50%', 
           transform: 'translateX(-50%)',
-          position: 'absolute'
+          position: 'absolute',
+          zIndex: 10
         }}
+        isConnectable={true}
       />
 
       <Handle
         type="source"
         position={Position.Right}
         id="right"
-        className="w-3 h-3 bg-blue-500 border-2 border-white rounded-full hover:bg-blue-600 hover:scale-125"
+        className="w-4 h-4 bg-blue-500 border-2 border-white rounded-full hover:bg-blue-600 hover:scale-110 transition-all duration-200"
         style={{ 
-          right: '-6px', 
+          right: '-8px', 
           top: '50%', 
           transform: 'translateY(-50%)',
-          position: 'absolute'
+          position: 'absolute',
+          zIndex: 10
         }}
+        isConnectable={true}
       />
 
       <Handle
         type="source"
         position={Position.Bottom}
         id="bottom"
-        className="w-3 h-3 bg-blue-500 border-2 border-white rounded-full hover:bg-blue-600 hover:scale-125"
+        className="w-4 h-4 bg-blue-500 border-2 border-white rounded-full hover:bg-blue-600 hover:scale-110 transition-all duration-200"
         style={{ 
-          bottom: '-6px', 
+          bottom: '-8px', 
           left: '50%', 
           transform: 'translateX(-50%)',
-          position: 'absolute'
+          position: 'absolute',
+          zIndex: 10
         }}
+        isConnectable={true}
       />
 
       <Handle
         type="source"
         position={Position.Left}
         id="left"
-        className="w-3 h-3 bg-blue-500 border-2 border-white rounded-full hover:bg-blue-600 hover:scale-125"
+        className="w-4 h-4 bg-blue-500 border-2 border-white rounded-full hover:bg-blue-600 hover:scale-110 transition-all duration-200"
         style={{ 
-          left: '-6px', 
+          left: '-8px', 
           top: '50%', 
           transform: 'translateY(-50%)',
-          position: 'absolute'
+          position: 'absolute',
+          zIndex: 10
         }}
+        isConnectable={true}
       />
 
-      {/* Handles Target para receber conexões */}
+      {/* Handles Target - Destino das conexões (invisíveis mas ativos) */}
       <Handle
         type="target"
         position={Position.Top}
         id="top-target"
-        className="w-3 h-3 bg-transparent"
+        className="w-4 h-4 bg-transparent border-transparent"
         style={{ 
-          top: '-6px', 
+          top: '-8px', 
           left: '50%', 
           transform: 'translateX(-50%)',
-          position: 'absolute'
+          position: 'absolute',
+          zIndex: 10
         }}
+        isConnectable={true}
       />
 
       <Handle
         type="target"
         position={Position.Right}
         id="right-target"
-        className="w-3 h-3 bg-transparent"
+        className="w-4 h-4 bg-transparent border-transparent"
         style={{ 
-          right: '-6px', 
+          right: '-8px', 
           top: '50%', 
           transform: 'translateY(-50%)',
-          position: 'absolute'
+          position: 'absolute',
+          zIndex: 10
         }}
+        isConnectable={true}
       />
 
       <Handle
         type="target"
         position={Position.Bottom}
         id="bottom-target"
-        className="w-3 h-3 bg-transparent"
+        className="w-4 h-4 bg-transparent border-transparent"
         style={{ 
-          bottom: '-6px', 
+          bottom: '-8px', 
           left: '50%', 
           transform: 'translateX(-50%)',
-          position: 'absolute'
+          position: 'absolute',
+          zIndex: 10
         }}
+        isConnectable={true}
       />
 
       <Handle
         type="target"
         position={Position.Left}
         id="left-target"
-        className="w-3 h-3 bg-transparent"
+        className="w-4 h-4 bg-transparent border-transparent"
         style={{ 
-          left: '-6px', 
+          left: '-8px', 
           top: '50%', 
           transform: 'translateY(-50%)',
-          position: 'absolute'
+          position: 'absolute',
+          zIndex: 10
         }}
+        isConnectable={true}
       />
 
       {/* Node Header */}
