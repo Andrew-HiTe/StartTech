@@ -105,7 +105,8 @@ body {
 
 .search-container {
   display: flex;
-  justify-content: center;
+  flex-direction: column; /* Permite empilhamento vertical */
+  align-items: center;
   padding: 10px;
   background-color: #DFDFDF; 
   border-radius: 8px;
@@ -125,4 +126,148 @@ body {
   outline: none;
   border-color: #007bff;
   box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+/* Estilos para lista de colaboradores */
+.collaborators-list {
+  width: 100%;
+  margin-top: 15px;
+}
+
+.collaborators-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 10px;
+  text-align: left;
+  padding-left: 15px;
+}
+
+.collaborator-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: transparent;
+  padding: 10px 15px;
+  margin-bottom: 8px;
+  transition: all 0.2s ease;
+}
+
+.collaborator-item:hover {
+  border-color: #007bff;
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.15);
+  background-color: rgba(0, 123, 255, 0.05);
+}
+
+.collaborator-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex-grow: 1;
+}
+
+.collaborator-name {
+  font-size: 14px;
+  color: #000000;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.collaborator-email {
+  font-size: 12px;
+  color: #666;
+}
+
+.access-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.access-dropdown {
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 20px;
+  padding: 4px 8px;
+  font-size: 14px;
+  color: #000000;
+  cursor: pointer;
+  min-width: 200px;
+  transition: border-color 0.2s ease;
+}
+
+.access-dropdown:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
+.access-dropdown:hover {
+  border-color: #007bff;
+}
+
+.remove-btn {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+}
+
+.remove-btn:hover {
+  background-color: #c82333;
+}
+
+/* Dropdown de sugestões */
+.search-container {
+  position: relative;
+}
+
+.suggestions-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.suggestion-item {
+  padding: 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s;
+}
+
+.suggestion-item:hover {
+  background-color: #f8f9fa;
+}
+
+.suggestion-item.loading {
+  cursor: default;
+  color: #666;
+  font-style: italic;
+}
+
+.suggestion-name {
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 2px;
+}
+
+.suggestion-email {
+  font-size: 12px;
+  color: #666;
 }

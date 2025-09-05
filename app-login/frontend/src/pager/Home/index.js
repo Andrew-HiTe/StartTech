@@ -1,7 +1,6 @@
 import Header from '../../componentes/Header'
 import ListaSuspensa from '../../componentes/ListaSuspensa'
 import Text from '../../componentes/Text'
-import './Home.css'
 
 const Home = (props) => {
     return(

@@ -1,20 +1,87 @@
 const express = require('express');
 const cors = require('cors');
+const mysql = require('mysql2');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3002;
 
-// Middlewares
 app.use(cors());
 app.use(express.json());
+
+// Configuração do banco de dados
+const db = mysql.createConnection({
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '123456',
+  database: process.env.DB_NAME || 'teste'
+});
+
+db.connect((err) => {
+  if (err) {
+    console.error('Erro ao conectar ao banco de dados:', err);
+    return;
+  }
+  console.log('Conectado ao banco de dados MySQL');
+});
 
 // Rota básica
 app.get('/', (req, res) => {
   res.json({ message: 'Servidor do Gerenciador de Acessos rodando!' });
 });
 
-// Rota para buscar projetos
+// Rota para verificar se email existe no banco
+app.post('/api/verify-email', (req, res) => {
+  const { email } = req.body;
+  
+  if (!email) {
+    return res.status(400).json({ error: 'Email é obrigatório' });
+  }
+
+  const query = 'SELECT email FROM usuarios WHERE email = ?';
+  
+  db.query(query, [email], (err, results) => {
+    if (err) {
+      console.error('Erro ao verificar email:', err);
+      return res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+    
+    const exists = results.length > 0;
+    res.json({ 
+      exists, 
+      email: exists ? results[0].email : null,
+      message: exists ? 'Email encontrado' : 'Email não cadastrado' 
+    });
+  });
+});
+
+// Rota para buscar colaboradores por termo de pesquisa
+app.get('/api/search-collaborators', (req, res) => {
+  const { search } = req.query;
+  
+  if (!search || search.length < 2) {
+    return res.json({ collaborators: [] });
+  }
+
+  // Como a tabela só tem email, vamos buscar apenas por email
+  const query = 'SELECT email FROM usuarios WHERE email LIKE ? LIMIT 10';
+  const searchTerm = `%${search}%`;
+  
+  db.query(query, [searchTerm], (err, results) => {
+    if (err) {
+      console.error('Erro ao buscar colaboradores:', err);
+      return res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+    
+    const collaborators = results.map(user => ({
+      email: user.email,
+      name: user.email
+    }));
+    
+    res.json({ collaborators });
+  });
+});
+
 app.get('/api/projects', (req, res) => {
   const projects = [
     { id: 1, name: 'Projeto Alpha', description: 'Sistema de gestão financeira' },
@@ -25,7 +92,6 @@ app.get('/api/projects', (req, res) => {
   res.json(projects);
 });
 
-// Rota para buscar colaboradores
 app.get('/api/collaborators', (req, res) => {
   const { search } = req.query;
   let collaborators = [

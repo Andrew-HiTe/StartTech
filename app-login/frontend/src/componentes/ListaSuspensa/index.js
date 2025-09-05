@@ -1,19 +1,5 @@
 import './ListaSuspensa.css'
 
-// const ListaSuspensa = (props) => {
-//     return(
-//         <section>
-//             <h1>Nossa gama de funcionalidades</h1>
-//             <ul>
-//                 <li>
-//                     <h3>Criação de diagramas online</h3>
-//                     <p>Interface intuitiva para montar fluxos, mapas e representações visuais de projetos.</p>
-//                 </li>
-//             </ul>
-//         </section>
-//     )
-// }
-
 const funcionalidades = [
   {
     titulo: "Criação de diagramas online",
