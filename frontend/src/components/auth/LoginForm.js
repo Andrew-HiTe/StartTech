@@ -23,11 +23,13 @@ function LoginForm() {
   const handleLogin = async () => {
     if (!email || !senha) {
       setError('Email e senha são obrigatórios');
+      setSenha(''); // Limpa a senha quando há erro de validação
       return;
     }
 
     if (!email.includes('@')) {
       setError('Por favor, digite um email válido');
+      setSenha(''); // Limpa a senha quando há erro de validação
       return;
     }
 
@@ -51,10 +53,12 @@ function LoginForm() {
         navigate('/access-manager');
       } else {
         setError(data.message || 'Erro no login');
+        setSenha(''); // Limpa a senha quando há erro
       }
     } catch (error) {
       console.error('Erro no login:', error);
       setError('Erro de conexão. Tente novamente.');
+      setSenha(''); // Limpa a senha quando há erro de conexão
     } finally {
       setLoading(false);
     }

@@ -4,19 +4,19 @@
   "description": "T-Draw - Plataforma de gestão de desenhos técnicos com controle de acesso",
   "main": "backend/server.js",
   "scripts": {
-    "start": "node backend/server.js",
+    "start": "concurrently \"npm run server\" \"npm run client\"",
+    "start:prod": "node backend/server.js",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "server": "nodemon backend/server.js",
     "client": "cd frontend && npm start",
     "build": "cd frontend && npm run build",
-    "install-deps": "npm install && cd frontend && npm install"
+    "install-deps": "npm install && cd frontend && npm install",
+    "setup": "npm run install-deps"
   },
   "dependencies": {
-    "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
-    "debug": "^4.4.1",
     "dotenv": "^16.3.1",
-    "express": "^5.1.0",
+    "express": "^4.18.2",
     "mysql2": "^3.6.0"
   },
   "devDependencies": {

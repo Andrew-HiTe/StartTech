@@ -45,15 +45,19 @@ class AccessController {
     try {
       const { search } = req.query;
       
-      if (!search || search.length < 2) {
-        return res.json({ collaborators: [] });
-      }
-
-      // Como a tabela só tem email, vamos buscar apenas por email
-      const query = 'SELECT email FROM usuarios WHERE email LIKE ? LIMIT 10';
-      const searchTerm = `%${search}%`;
+      let query, params;
       
-      db.query(query, [searchTerm], (err, results) => {
+      if (!search || search.length === 0) {
+        // Se não há busca, retorna todos os emails
+        query = 'SELECT email FROM usuarios LIMIT 20';
+        params = [];
+      } else {
+        // Se há busca, filtra por email
+        query = 'SELECT email FROM usuarios WHERE email LIKE ? LIMIT 10';
+        params = [`%${search}%`];
+      }
+      
+      db.query(query, params, (err, results) => {
         if (err) {
           console.error('Erro ao buscar colaboradores:', err);
           return res.status(500).json({ error: 'Erro interno do servidor' });

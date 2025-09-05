@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import './AccessManager.css';
 
 const AccessManager = () => {
   const [selectedProject, setSelectedProject] = useState('');
@@ -7,6 +8,7 @@ const AccessManager = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [allEmails, setAllEmails] = useState([]);
 
   const projects = [
     { value: '', label: 'Selecione um projeto' },
@@ -26,6 +28,29 @@ const AccessManager = () => {
     setSelectedProject(e.target.value);
   };
 
+  // Função para carregar todos os emails disponíveis
+  const loadAllEmails = async () => {
+    setIsSearching(true);
+    try {
+      const response = await fetch('/api/access/search-collaborators?search=');
+      const data = await response.json();
+      setAllEmails(data.collaborators || []);
+      setSearchResults(data.collaborators || []);
+      setShowSuggestions(true);
+    } catch (error) {
+      console.error('Erro ao carregar emails:', error);
+      setSearchResults([]);
+    }
+    setIsSearching(false);
+  };
+
+  // Função para lidar com o foco no campo de busca
+  const handleInputFocus = () => {
+    if (searchTerm === '') {
+      loadAllEmails();
+    }
+  };
+
   const handleSearchChange = async (e) => {
     const value = e.target.value;
     setSearchTerm(value);
@@ -42,9 +67,17 @@ const AccessManager = () => {
         setSearchResults([]);
       }
       setIsSearching(false);
+    } else if (value.length === 0) {
+      // Se não há texto, mostra todos os emails
+      setSearchResults(allEmails);
+      setShowSuggestions(allEmails.length > 0);
     } else {
-      setSearchResults([]);
-      setShowSuggestions(false);
+      // Se há apenas 1 caractere, filtra localmente dos emails já carregados
+      const filtered = allEmails.filter(email => 
+        email.email.toLowerCase().includes(value.toLowerCase())
+      );
+      setSearchResults(filtered);
+      setShowSuggestions(filtered.length > 0);
     }
   };
 
@@ -59,8 +92,10 @@ const AccessManager = () => {
       };
       setAddedCollaborators([...addedCollaborators, newCollaborator]);
     }
-    setSearchTerm('');
+    
+    // Fecha as sugestões e limpa o campo após a seleção
     setShowSuggestions(false);
+    setSearchTerm('');
     setSearchResults([]);
   };
 
@@ -124,9 +159,25 @@ const AccessManager = () => {
     ));
   };
 
-  const handleClickOutside = () => {
-    setShowSuggestions(false);
+  const handleClickOutside = (e) => {
+    // Só fecha se clicar fora do container de busca
+    if (!e.target.closest('.search-container')) {
+      setShowSuggestions(false);
+    }
   };
+
+  // UseEffect para detectar cliques fora do componente
+  useEffect(() => {
+    if (showSuggestions) {
+      document.addEventListener('click', handleClickOutside);
+    } else {
+      document.removeEventListener('click', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [showSuggestions]);
 
   return (
     <div className="access-manager">
@@ -166,13 +217,14 @@ const AccessManager = () => {
       {/* Seção Buscador de Colaboradores */}
       <div className="section">
         <h2 className="section-title">Inserir colaboradores:</h2>
-        <div className="search-container" onClick={handleClickOutside}>
+        <div className="search-container">
           <input
             type="text"
             className="search-input"
-            placeholder="Digite o email do colaborador e pressione Enter..."
+            placeholder="Clique para ver todos os emails ou digite para buscar..."
             value={searchTerm}
             onChange={handleSearchChange}
+            onFocus={handleInputFocus}
             onKeyPress={handleAddCollaborator}
           />
           
@@ -184,7 +236,11 @@ const AccessManager = () => {
                 <div 
                   key={index} 
                   className="suggestion-item"
-                  onClick={() => handleSelectCollaborator(collaborator)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleSelectCollaborator(collaborator);
+                  }}
                 >
                   <div className="suggestion-name">{collaborator.name || collaborator.email}</div>
                   <div className="suggestion-email">{collaborator.email}</div>

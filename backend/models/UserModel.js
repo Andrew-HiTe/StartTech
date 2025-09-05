@@ -5,7 +5,7 @@
  */
 
 const db = require('../config/database');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 
 /**
  * Busca usuário no banco de dados pelo email
