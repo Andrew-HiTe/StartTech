@@ -1,0 +1,37 @@
+{
+  "name": "t-draw",
+  "version": "1.0.0",
+  "description": "T-Draw - Plataforma de gestão de desenhos técnicos com controle de acesso",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "nodemon backend/server.js",
+    "client": "cd frontend && npm start",
+    "build": "cd frontend && npm run build",
+    "install-deps": "npm install && cd frontend && npm install"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "debug": "^4.4.1",
+    "dotenv": "^16.3.1",
+    "express": "^5.1.0",
+    "mysql2": "^3.6.0"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "nodemon": "^3.0.1"
+  },
+  "keywords": [
+    "t-draw",
+    "technical-drawings",
+    "access-control",
+    "collaboration",
+    "mysql",
+    "react",
+    "express"
+  ],
+  "author": "T-Draw Team",
+  "license": "MIT"
+}
