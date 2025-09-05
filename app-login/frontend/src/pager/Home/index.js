@@ -1,6 +1,7 @@
 import Header from '../../componentes/Header'
 import ListaSuspensa from '../../componentes/ListaSuspensa'
 import Text from '../../componentes/Text'
+import LoginForm from '../../components/loginForm'
 import './Home.css'
 
 const Home = (props) => {

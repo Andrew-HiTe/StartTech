@@ -42,16 +42,16 @@ function App() {
 
   return (
     <div className="App">
-      <header className="App-header">
+      {/*<header className="App-header">
         <div 
           className="login-background"
           style={{
             backgroundImage: `url(${process.env.PUBLIC_URL}/background.jpg)`
           }}
         >
-          <LoginForm />
+          <LoginForm/>
         </div>
-      </header>
+      </header>*/}
       <Home imagem={homelogo} diag={diagrama}/>
     </div>
   );

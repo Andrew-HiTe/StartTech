@@ -1,9 +1,14 @@
+body{
+  background-color: #002233
+}
+
 .texthome {
   display: flex;
   align-items: center;
   justify-content: flex-start;
   min-height: 100vh;
   padding-left: 80px;
+  color: #FFFFFF;
 }
 
 .texthome-content {
@@ -15,6 +20,17 @@
   font-size: 3rem;
   font-weight: bold;
   margin-bottom: 15px;
+
+  background: linear-gradient(
+    90deg,
+    rgba(0, 255, 212, 1) 0%,
+    rgba(164, 77, 255, 1) 50%,
+    rgba(255, 0, 158, 1) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text; 
+  color: transparent;
 }
 
 .texthome p {
@@ -34,7 +50,18 @@
 .texthome-diagrama img{
   width: 70%;
   height: auto;
-  border-radius: 25px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 4px solid transparent;
+  border-radius: 16px;
+  background:
+    linear-gradient(#fff, #fff) padding-box, /* fundo do card */
+    linear-gradient(
+      90deg,
+      rgba(0, 255, 212, 1) 0%,
+      rgba(164, 77, 255, 1) 50%,
+      rgba(4, 87, 167, 1) 100%) border-box; /* gradiente aplicado na borda */
+}
+
+.texthome-diagrama img:hover{
+  box-shadow: 0 4px 8px rgba(255, 255, 255, 1);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }

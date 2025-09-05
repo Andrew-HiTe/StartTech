@@ -35,7 +35,7 @@ function LoginForm() {
 
   return (
     <div className="login-container">
-      <img src="/logo.png" alt="Logo" className="logo" />
+      <img src={"/logo.png"} alt="Logo" className="logo" />
       <h1 className="titulo">T-DRAW</h1>
       
       <input
