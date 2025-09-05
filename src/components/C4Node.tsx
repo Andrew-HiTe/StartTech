@@ -1,12 +1,14 @@
 // Custom C4 Node Component with proper connection handles
 import React, { useState, useRef, useCallback } from 'react';
-import { Handle, Position, type NodeProps } from '@xyflow/react';
+import { Handle, Position, type NodeProps, NodeResizer } from '@xyflow/react';
 import { useDiagramStore, type C4NodeData } from '../stores/diagramStore';
 
 export const C4NodeComponent: React.FC<NodeProps> = ({ 
   data, 
   id, 
-  selected 
+  selected,
+  width,
+  height
 }) => {
   const [isEditing, setIsEditing] = useState<'title' | 'description' | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -60,67 +62,138 @@ export const C4NodeComponent: React.FC<NodeProps> = ({
   return (
     <div 
       className={`
-        relative min-w-[180px] max-w-[300px] bg-white rounded-lg shadow-lg border-2 transition-all duration-200
+        relative bg-white rounded-lg shadow-lg border-2 flex flex-col
         ${getNodeTypeColor()}
         ${selected ? 'ring-2 ring-blue-400 ring-offset-2' : ''}
         hover:shadow-xl
       `}
+      style={{
+        width: width || (nodeData.width as number) || 180,
+        height: height || (nodeData.height as number) || 120,
+        minWidth: '180px',
+        minHeight: '120px'
+      }}
     >
-      {/* Connection Handles - Visible and properly positioned */}
+      {/* React Flow Native Resizer - com handles em todas as direções */}
+      {selected && (
+        <NodeResizer 
+          minWidth={180}
+          minHeight={120}
+          isVisible={selected}
+          lineClassName="border-blue-400 border-2 opacity-80"
+          handleClassName="w-3 h-3 bg-blue-400 border border-white rounded-sm opacity-90 hover:opacity-100"
+          keepAspectRatio={false}
+        />
+      )}
+
+      {/* Connection Handles - Posicionados dinamicamente baseados no tamanho */}
       <Handle
-        type="target"
+        type="source"
         position={Position.Top}
         id="top"
-        className="w-3 h-3 bg-blue-500 border-2 border-white rounded-full !-top-1.5 !left-1/2 !transform !-translate-x-1/2 hover:bg-blue-600 hover:scale-125 transition-all"
+        className="w-3 h-3 bg-blue-500 border-2 border-white rounded-full hover:bg-blue-600 hover:scale-125"
+        style={{ 
+          top: '-6px', 
+          left: '50%', 
+          transform: 'translateX(-50%)',
+          position: 'absolute'
+        }}
       />
+
       <Handle
         type="source"
+        position={Position.Right}
+        id="right"
+        className="w-3 h-3 bg-blue-500 border-2 border-white rounded-full hover:bg-blue-600 hover:scale-125"
+        style={{ 
+          right: '-6px', 
+          top: '50%', 
+          transform: 'translateY(-50%)',
+          position: 'absolute'
+        }}
+      />
+
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="bottom"
+        className="w-3 h-3 bg-blue-500 border-2 border-white rounded-full hover:bg-blue-600 hover:scale-125"
+        style={{ 
+          bottom: '-6px', 
+          left: '50%', 
+          transform: 'translateX(-50%)',
+          position: 'absolute'
+        }}
+      />
+
+      <Handle
+        type="source"
+        position={Position.Left}
+        id="left"
+        className="w-3 h-3 bg-blue-500 border-2 border-white rounded-full hover:bg-blue-600 hover:scale-125"
+        style={{ 
+          left: '-6px', 
+          top: '50%', 
+          transform: 'translateY(-50%)',
+          position: 'absolute'
+        }}
+      />
+
+      {/* Handles Target para receber conexões */}
+      <Handle
+        type="target"
         position={Position.Top}
-        id="top-source"
-        className="w-3 h-3 bg-blue-500 border-2 border-white rounded-full !-top-1.5 !left-1/2 !transform !-translate-x-1/2 hover:bg-blue-600 hover:scale-125 transition-all"
+        id="top-target"
+        className="w-3 h-3 bg-transparent"
+        style={{ 
+          top: '-6px', 
+          left: '50%', 
+          transform: 'translateX(-50%)',
+          position: 'absolute'
+        }}
       />
 
       <Handle
         type="target"
         position={Position.Right}
-        id="right"
-        className="w-3 h-3 bg-blue-500 border-2 border-white rounded-full !-right-1.5 !top-1/2 !transform !-translate-y-1/2 hover:bg-blue-600 hover:scale-125 transition-all"
-      />
-      <Handle
-        type="source"
-        position={Position.Right}
-        id="right-source"
-        className="w-3 h-3 bg-blue-500 border-2 border-white rounded-full !-right-1.5 !top-1/2 !transform !-translate-y-1/2 hover:bg-blue-600 hover:scale-125 transition-all"
+        id="right-target"
+        className="w-3 h-3 bg-transparent"
+        style={{ 
+          right: '-6px', 
+          top: '50%', 
+          transform: 'translateY(-50%)',
+          position: 'absolute'
+        }}
       />
 
       <Handle
         type="target"
         position={Position.Bottom}
-        id="bottom"
-        className="w-3 h-3 bg-blue-500 border-2 border-white rounded-full !-bottom-1.5 !left-1/2 !transform !-translate-x-1/2 hover:bg-blue-600 hover:scale-125 transition-all"
-      />
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        id="bottom-source"
-        className="w-3 h-3 bg-blue-500 border-2 border-white rounded-full !-bottom-1.5 !left-1/2 !transform !-translate-x-1/2 hover:bg-blue-600 hover:scale-125 transition-all"
+        id="bottom-target"
+        className="w-3 h-3 bg-transparent"
+        style={{ 
+          bottom: '-6px', 
+          left: '50%', 
+          transform: 'translateX(-50%)',
+          position: 'absolute'
+        }}
       />
 
       <Handle
         type="target"
         position={Position.Left}
-        id="left"
-        className="w-3 h-3 bg-blue-500 border-2 border-white rounded-full !-left-1.5 !top-1/2 !transform !-translate-y-1/2 hover:bg-blue-600 hover:scale-125 transition-all"
-      />
-      <Handle
-        type="source"
-        position={Position.Left}
-        id="left-source"
-        className="w-3 h-3 bg-blue-500 border-2 border-white rounded-full !-left-1.5 !top-1/2 !transform !-translate-y-1/2 hover:bg-blue-600 hover:scale-125 transition-all"
+        id="left-target"
+        className="w-3 h-3 bg-transparent"
+        style={{ 
+          left: '-6px', 
+          top: '50%', 
+          transform: 'translateY(-50%)',
+          position: 'absolute'
+        }}
       />
 
       {/* Node Header */}
-      <div className={`px-4 py-3 rounded-t-lg border-b ${getHeaderColor()}`}>
+      <div className={`px-3 py-2 rounded-t-lg border-b ${getHeaderColor()}`}>
         {isEditing === 'title' ? (
           <input
             type="text"
@@ -135,7 +208,7 @@ export const C4NodeComponent: React.FC<NodeProps> = ({
           <div
             ref={titleRef}
             onDoubleClick={() => handleDoubleClick('title')}
-            className="font-semibold text-sm text-gray-800 cursor-text hover:bg-gray-100 rounded px-1 py-0.5 transition-colors"
+            className="font-semibold text-sm text-gray-800 cursor-text hover:bg-gray-100 rounded px-1 py-0.5 transition-colors leading-tight"
           >
             {nodeData.title}
           </div>
@@ -143,30 +216,25 @@ export const C4NodeComponent: React.FC<NodeProps> = ({
       </div>
 
       {/* Node Content */}
-      <div className="px-4 py-3">
+      <div className="px-3 py-2 flex-1 flex flex-col">
         {isEditing === 'description' ? (
           <textarea
             value={editValue}
             onChange={(e) => setEditValue(e.target.value)}
             onBlur={handleEditSubmit}
             onKeyDown={handleKeyDown}
-            className="w-full h-20 bg-white border-2 border-yellow-400 rounded px-2 py-1 text-sm text-gray-600 resize-none focus:outline-none focus:border-yellow-500"
+            className="w-full flex-1 bg-white border-2 border-yellow-400 rounded px-2 py-1 text-xs text-gray-600 resize-none focus:outline-none focus:border-yellow-500"
             autoFocus
           />
         ) : (
           <div
             ref={descRef}
             onDoubleClick={() => handleDoubleClick('description')}
-            className="text-sm text-gray-600 leading-relaxed cursor-text whitespace-pre-wrap min-h-[50px] hover:bg-gray-50 rounded px-1 py-0.5 transition-colors"
+            className="text-xs text-gray-600 leading-tight cursor-text whitespace-pre-wrap flex-1 hover:bg-gray-50 rounded px-1 py-0.5 transition-colors overflow-auto"
           >
             {nodeData.description}
           </div>
         )}
-      </div>
-
-      {/* Type indicator */}
-      <div className="absolute -top-2 -right-2 px-2 py-1 text-xs font-semibold rounded-full shadow-sm bg-white border">
-        {nodeData.type.charAt(0).toUpperCase()}
       </div>
     </div>
   );

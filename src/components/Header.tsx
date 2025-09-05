@@ -1,11 +1,43 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 
 interface HeaderProps {
   projectName: string;
   diagramName?: string;
+  onDiagramNameChange?: (newName: string) => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ projectName, diagramName = "DIAGRAMA" }) => {
+export const Header: React.FC<HeaderProps> = ({ 
+  projectName, 
+  diagramName = "DIAGRAMA", 
+  onDiagramNameChange 
+}) => {
+  const [isEditingDiagramName, setIsEditingDiagramName] = useState(false);
+  const [editValue, setEditValue] = useState(diagramName);
+
+  const handleDiagramNameClick = useCallback(() => {
+    if (onDiagramNameChange) {
+      setIsEditingDiagramName(true);
+      setEditValue(diagramName);
+    }
+  }, [diagramName, onDiagramNameChange]);
+
+  const handleEditSubmit = useCallback(() => {
+    if (onDiagramNameChange && editValue.trim()) {
+      onDiagramNameChange(editValue.trim());
+    }
+    setIsEditingDiagramName(false);
+  }, [editValue, onDiagramNameChange]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleEditSubmit();
+    } else if (e.key === 'Escape') {
+      setIsEditingDiagramName(false);
+      setEditValue(diagramName);
+    }
+  }, [handleEditSubmit, diagramName]);
+
   return (
     <div className="px-6 py-4 bg-transparent">
       <div className="flex items-center justify-between">
@@ -14,9 +46,29 @@ export const Header: React.FC<HeaderProps> = ({ projectName, diagramName = "DIAG
           <h1 className="text-gray-800 font-semibold" style={{ fontSize: '24px', fontFamily: 'Nunito Sans, sans-serif' }}>
             {projectName}
           </h1>
-          <span className="text-gray-600 font-semibold text-lg uppercase tracking-wide">
-            {diagramName}
-          </span>
+          
+          {isEditingDiagramName ? (
+            <input
+              type="text"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onBlur={handleEditSubmit}
+              onKeyDown={handleKeyDown}
+              className="text-gray-600 font-semibold text-lg uppercase tracking-wide bg-yellow-50 border-2 border-yellow-400 rounded px-2 py-1 focus:outline-none focus:border-yellow-500"
+              autoFocus
+              style={{ fontFamily: 'Nunito Sans, sans-serif' }}
+            />
+          ) : (
+            <span 
+              className={`text-gray-600 font-semibold text-lg uppercase tracking-wide ${
+                onDiagramNameChange ? 'cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors' : ''
+              }`}
+              onClick={handleDiagramNameClick}
+              title={onDiagramNameChange ? 'Clique para editar o nome do diagrama' : ''}
+            >
+              {diagramName}
+            </span>
+          )}
         </div>
         
         {/* Settings Icon */}

@@ -227,8 +227,20 @@ function Sidebar({ isMinimized, onToggle }: SidebarProps) {
               type="text"
               value={newDiagramName}
               onChange={(e) => setNewDiagramName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && newDiagramName.trim()) {
+                  createDiagram(newDiagramName.trim(), newDiagramType);
+                  setIsCreateModalOpen(false);
+                  setNewDiagramName('');
+                  setNewDiagramType('c4');
+                } else if (e.key === 'Escape') {
+                  setIsCreateModalOpen(false);
+                  setNewDiagramName('');
+                }
+              }}
               placeholder="Ex: Sistema de Vendas"
               className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              autoFocus
             />
           </div>
           <div className="flex gap-2 pt-4">
@@ -275,8 +287,18 @@ function Sidebar({ isMinimized, onToggle }: SidebarProps) {
                 type="email"
                 value={newUserEmail}
                 onChange={(e) => setNewUserEmail(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newUserEmail.trim() && currentDiagramId) {
+                    addUserAccess(currentDiagramId, newUserEmail.trim());
+                    setNewUserEmail('');
+                  } else if (e.key === 'Escape') {
+                    setIsAccessModalOpen(false);
+                    setNewUserEmail('');
+                  }
+                }}
                 placeholder="email@exemplo.com"
                 className="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                autoFocus
               />
               <button 
                 onClick={() => {

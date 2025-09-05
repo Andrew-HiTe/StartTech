@@ -46,7 +46,7 @@ export const Toolbar: React.FC = () => {
   ];
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-lg px-6 py-3 flex items-center gap-4">
+    <div className="bg-white border border-gray-200 rounded-lg shadow-lg px-4 py-2 flex items-center gap-3">
       {/* Tool buttons */}
       <div className="flex items-center gap-2">
         {toolButtons.map((tool) => (
@@ -54,14 +54,14 @@ export const Toolbar: React.FC = () => {
             key={tool.id}
             onClick={() => setCurrentTool(tool.id)}
             title={tool.description}
-            className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all duration-200 ${
+            className={`px-3 py-2 rounded-md border text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
               tool.active
-                ? 'bg-blue-500 text-white border-blue-500 shadow-md transform scale-105'
-                : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:border-blue-300 hover:scale-105'
+                ? 'bg-blue-500 text-white border-blue-500 shadow-md'
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:border-blue-300'
             }`}
           >
-            <span className="mr-2">{tool.icon}</span>
-            {tool.label}
+            <span>{tool.icon}</span>
+            <span>{tool.label}</span>
           </button>
         ))}
       </div>
@@ -74,35 +74,35 @@ export const Toolbar: React.FC = () => {
         <button
           onClick={handleDelete}
           disabled={selectedElements.length === 0}
-          className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all duration-200 ${
+          className={`px-3 py-2 rounded-md border text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
             selectedElements.length > 0
-              ? 'bg-red-500 text-white border-red-500 hover:bg-red-600 hover:scale-105'
+              ? 'bg-red-500 text-white border-red-500 hover:bg-red-600'
               : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
           }`}
         >
-          <span className="mr-2">🗑️</span>
-          Excluir
+          <span>🗑️</span>
+          <span>Excluir</span>
         </button>
 
         <button
           onClick={exportDiagram}
-          className="px-4 py-2 rounded-lg border bg-green-500 text-white border-green-500 hover:bg-green-600 hover:scale-105 text-sm font-medium transition-all duration-200"
+          className="px-3 py-2 rounded-md border bg-green-500 text-white border-green-500 hover:bg-green-600 text-sm font-medium transition-all duration-200 flex items-center gap-2"
         >
-          <span className="mr-2">💾</span>
-          Exportar
+          <span>💾</span>
+          <span>Exportar</span>
         </button>
       </div>
 
-      {/* Status info */}
-      <div className="ml-auto flex items-center gap-6 text-sm text-gray-600">
+      {/* Status info - Compacto */}
+      <div className="ml-4 flex items-center gap-4 text-sm text-gray-600">
         <span className="font-medium">
           {selectedElements.length > 0 
-            ? `${selectedElements.length} elemento(s) selecionado(s)`
-            : 'Nenhum elemento selecionado'
+            ? `${selectedElements.length} selecionado(s)`
+            : 'Nenhum selecionado'
           }
         </span>
         <span className="text-xs bg-gray-100 px-2 py-1 rounded">
-          {nodes.length} tabela(s) • {edges.length} conexão(ões)
+          {nodes.length} tabelas • {edges.length} conexões
         </span>
       </div>
     </div>

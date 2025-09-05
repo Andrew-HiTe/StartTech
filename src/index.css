@@ -22,3 +22,45 @@ html, body {
 #root {
   min-height: 100vh;
 }
+
+/* Custom cursor styles */
+.react-flow__pane {
+  cursor: default !important; /* Cursor padrão setinha ao invés do dedo */
+}
+
+.react-flow__pane.dragging {
+  cursor: grabbing !important; /* Mãozinha fechada durante drag */
+}
+
+.react-flow__pane.grab-ready {
+  cursor: grab !important; /* Mãozinha aberta quando pronto para drag */
+}
+
+/* Override para garantir cursor correto nos nós */
+.react-flow__node {
+  cursor: default !important;
+}
+
+.react-flow__node:hover {
+  cursor: move !important;
+}
+
+/* Cursor personalizado para modo adicionar tabela */
+.cursor-add-table {
+  cursor: crosshair !important;
+}
+
+/* Estados de drag específicos */
+.middle-mouse-dragging {
+  cursor: grabbing !important;
+}
+
+/* Preview da área de criação de tabela */
+.table-creation-preview {
+  position: fixed;
+  border: 2px dashed #3b82f6;
+  background-color: rgba(59, 130, 246, 0.1);
+  pointer-events: none;
+  z-index: 1000;
+  border-radius: 8px;
+}

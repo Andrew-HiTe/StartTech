@@ -1,103 +1,32 @@
 <!-- Use this file to provide workspace-specific custom instructions to Copilot. For more details, visit https://code.visualstudio.com/docs/copilot/copilot-customization#_use-a-githubcopilotinstructionsmd-file -->
 
-## Instruções para Copilot
+## Instruções para Copilot - Sistema Otimizado ⚡
 
-Para acelerar o processamento, melhorar a agilidade e o tratamento de erros, utilize os arquivos presentes na pasta `docs/` como referência:
+### 📚 Arquivos de Referência para Processamento Otimizado
 
-- `ERROR_HANDLING_GUIDE.md`: Siga as práticas recomendadas de tratamento de erros descritas neste arquivo.
-- `QUICK_CHECKS.md`: Consulte este arquivo para realizar verificações rápidas e garantir respostas mais ágeis.
-- `PROJECT_CONTEXT.md`: Use este arquivo para entender o contexto do projeto e tomar decisões mais informadas.
-- `TEMPLATES.md`: Utilize os templates para padronizar respostas e acelerar o desenvolvimento.
-- `CONTEXT.md`: Consulte para obter informações adicionais sobre o contexto geral do projeto.
+**PRIORIDADE MÁXIMA - Sempre consultar primeiro:**
 
-Sempre que possível, priorize o uso dessas referências para otimizar o raciocínio e a entrega de soluções.
-- [x] Clarify Project Requirements
+- `COPILOT_CACHE.md`: **Cache de alta frequência** - Informações instantâneas sobre stack, comandos e padrões validados. Use para evitar reanálise de contexto básico.
+- `ADVANCED_ERROR_HANDLING.md`: **Sistema completo de erros** - Patterns de recovery, error boundaries, logging estruturado e debugging automático.
 
-- [x] Scaffold the Project
-	<!-- Vite React TypeScript project created successfully -->
+**Referências Secundárias:**
+- `ERROR_HANDLING_GUIDE.md`: Guia básico de troubleshooting para problemas comuns do projeto.
+- `QUICK_CHECKS.md`: Checklist de validação rápida para build, lint e performance.
+- `PROJECT_CONTEXT.md`: Contexto detalhado da arquitetura e stack tecnológico.
+- `TEMPLATES.md`: Templates padronizados para acelerar desenvolvimento.
 
-- [x] Customize the Project
-	<!-- React C4 diagram application with hybrid mouse functionality, custom components, and Zustand store created -->
+### 🚀 Workflow de Processamento Otimizado
 
-- [x] Install Required Extensions
-	<!-- No specific extensions required for this project -->
+1. **Consulta COPILOT_CACHE.md** para informações instantâneas (stack, comandos, config)
+2. **Use ADVANCED_ERROR_HANDLING.md** para implementar tratamento robusto de erros
+3. **Consulte QUICK_CHECKS.md** para validações rápidas pré-commit
+4. **Referencie outros arquivos** apenas quando precisar de contexto específico adicional
 
-- [x] Compile the Project
-	<!--
-	Corrected dependency versions (Tailwind v3.4 stable), fixed PostCSS and Tailwind configs for ES modules, build successful
-	-->
+### ⚡ Regras de Performance
 
-- [ ] Create and Run Task
-	<!--
-	Verify that all previous steps have been completed.
-	Check https://code.visualstudio.com/docs/debugtest/tasks to determine if the project needs a task. If so, use the create_and_run_task to create and launch a task based on package.json, README.md, and project structure.
-	Skip this step otherwise.
-	 -->
+- **NUNCA reanalisar** stack tecnológico básico (já cacheado)
+- **SEMPRE usar** padrões validados do cache para React Flow + Zustand
+- **PRIORIZAR** fixes instantâneos documentados
+- **IMPLEMENTAR** error boundaries e recovery automático em novos componentes
 
-- [ ] Launch the Project
-	<!--
-	Verify that all previous steps have been completed.
-	Prompt user for debug mode, launch only if confirmed.
-	 -->
-
-- [ ] Ensure Documentation is Complete
-	<!--
-	Verify that all previous steps have been completed.
-	Verify that README.md and the copilot-instructions.md file in the .github directory exists and contains current project information.
-	Clean up the copilot-instructions.md file in the .github directory by removing all HTML comments.
-	 -->
-
-<!--
-## Execution Guidelines
-PROGRESS TRACKING:
-- If any tools are available to manage the above todo list, use it to track progress through this checklist.
-- After completing each step, mark it complete and add a summary.
-- Read current todo list status before starting each new step.
-
-COMMUNICATION RULES:
-- Avoid verbose explanations or printing full command outputs.
-- If a step is skipped, state that briefly (e.g. "No extensions needed").
-- Do not explain project structure unless asked.
-- Keep explanations concise and focused.
-
-DEVELOPMENT RULES:
-- Use '.' as the working directory unless user specifies otherwise.
-- Avoid adding media or external links unless explicitly requested.
-- Use placeholders only with a note that they should be replaced.
-- Use VS Code API tool only for VS Code extension projects.
-- Once the project is created, it is already opened in Visual Studio Code—do not suggest commands to open this project in Visual Studio again.
-- If the project setup information has additional rules, follow them strictly.
-
-FOLDER CREATION RULES:
-- Always use the current directory as the project root.
-- If you are running any terminal commands, use the '.' argument to ensure that the current working directory is used ALWAYS.
-- Do not create a new folder unless the user explicitly requests it besides a .vscode folder for a tasks.json file.
-- If any of the scaffolding commands mention that the folder name is not correct, let the user know to create a new folder with the correct name and then reopen it again in vscode.
-
-EXTENSION INSTALLATION RULES:
-- Only install extension specified by the get_project_setup_info tool. DO NOT INSTALL any other extensions.
-
-PROJECT CONTENT RULES:
-- If the user has not specified project details, assume they want a "Hello World" project as a starting point.
-- Avoid adding links of any type (URLs, files, folders, etc.) or integrations that are not explicitly required.
-- Avoid generating images, videos, or any other media files unless explicitly requested.
-- If you need to use any media assets as placeholders, let the user know that these are placeholders and should be replaced with the actual assets later.
-- Ensure all generated components serve a clear purpose within the user's requested workflow.
-- If a feature is assumed but not confirmed, prompt the user for clarification before including it.
-- If you are working on a VS Code extension, use the VS Code API tool with a query to find relevant VS Code API references and samples related to that query.
-
-TASK COMPLETION RULES:
-- Your task is complete when:
-  - Project is successfully scaffolded and compiled without errors
-  - copilot-instructions.md file in the .github directory exists in the project
-  - README.md file exists and is up to date
-  - User is provided with clear instructions to debug/launch the project
-
-Before starting a new task in the above plan, update progress in the plan.
--->
-- Work through each checklist item systematically.
-- Keep communication concise and focused.
-- Follow development best practices.
-
-## Project: React C4 Diagram Application
-This project is a React TypeScript application for creating C4 diagrams with hybrid mouse functionality for moving tables and creating connections using React Flow, Zustand for state management, and Tailwind CSS.
+Estas referências otimizam o raciocínio e aceleram significativamente a entrega de soluções.
