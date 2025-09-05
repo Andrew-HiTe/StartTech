@@ -1,6 +1,16 @@
+/**
+ * Controlador de autenticação responsável por gerenciar
+ * operações de login e criptografia automática de senhas
+ * no banco de dados
+ */
+
 const UserModel = require('../models/userModel');
 
 class AuthController {
+  /**
+   * Realiza o processo de login do usuário
+   * Valida credenciais, verifica senha criptografada e retorna resposta de autenticação
+   */
   static async login(req, res) {
     try {
       const { email, senha } = req.body;
@@ -50,6 +60,10 @@ class AuthController {
     }
   }
 
+  /**
+   * Verifica e criptografa senhas que ainda não estão em hash
+   * Função executada periodicamente para garantir segurança das senhas armazenadas
+   */
   static async verificaSenhas() {
     try {
       const users = await UserModel.findUnhashedPasswords();

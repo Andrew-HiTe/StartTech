@@ -1,3 +1,8 @@
+/**
+ * Componente principal da aplicação React
+ * Renderiza primeiro a Home e depois o Login quando necessário
+ */
+
 import './App.css';
 import Home from './pager/Home';
 import homelogo from './imagens/homelogo.png'
@@ -42,16 +47,16 @@ function App() {
 
   return (
     <div className="App">
-      {/*<header className="App-header">
+      <header className="App-header">
         <div 
           className="login-background"
           style={{
             backgroundImage: `url(${process.env.PUBLIC_URL}/background.jpg)`
           }}
         >
-          <LoginForm/>
+          <LoginForm />
         </div>
-      </header>*/}
+      </header>
       <Home imagem={homelogo} diag={diagrama}/>
     </div>
   );

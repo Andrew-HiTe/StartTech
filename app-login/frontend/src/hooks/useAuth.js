@@ -1,10 +1,22 @@
+/**
+ * Hook customizado para gerenciamento de autenticação
+ * Fornece funcionalidades de login, controle de loading,
+ * gerenciamento de erros e integração com AuthService
+ */
+
 import { useState, useEffect } from 'react';
 import AuthService from '../services/authService';
 
+/**
+ * Hook que encapsula lógica de autenticação e estados relacionados
+ */
 export const useAuth = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  /**
+   * Executa o processo de login utilizando o AuthService
+   */
   const login = async (email, senha) => {
     setLoading(true);
     setError(null);
@@ -26,10 +38,16 @@ export const useAuth = () => {
     }
   };
 
+  /**
+   * Define uma mensagem de erro personalizada
+   */
   const showError = (message) => {
     setError(message);
   };
 
+  /**
+   * Limpa a mensagem de erro atual
+   */
   const clearError = () => {
     setError(null);
   };

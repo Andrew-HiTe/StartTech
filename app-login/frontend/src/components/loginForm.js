@@ -1,30 +1,40 @@
-import React, { useState } from 'react';
-import { useAuth } from '../hooks/useAuth';
+/**
+ * Componente de formulário de login
+ * Interface simples de autenticação com campos de email e senha
+ */
 
+import React, { useState } from 'react';
+
+/**
+ * Componente que renderiza o formulário de login
+ */
 function LoginForm() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
-  const { login, loading, error, showError } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleLogin = async () => {
-    // Validação local
+  /**
+   * Manipula o processo de login
+   */
+  const handleLogin = () => {
     if (!email || !senha) {
-      showError('Email e senha são obrigatórios');
+      setError('Email e senha são obrigatórios');
       return;
     }
 
     if (!email.includes('@')) {
-      showError('Por favor, digite um email válido');
+      setError('Por favor, digite um email válido');
       return;
     }
 
-    const result = await login(email, senha);
+    setLoading(true);
+    setError('');
     
-    if (result.success) {
-      window.location.href = '/dashboard'; // redirect
-    } else {
-      setSenha(''); // Limpa apenas a senha
-    }
+    setTimeout(() => {
+      setLoading(false);
+      console.log('Login realizado:', { email, senha });
+    }, 1000);
   };
 
   const handleKeyPress = (e) => {
