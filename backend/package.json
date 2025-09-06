@@ -8,15 +8,22 @@
     "dev": "nodemon server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["t-draw", "backend", "api", "node", "express"],
+  "keywords": [
+    "t-draw",
+    "backend",
+    "api",
+    "node",
+    "express"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.18.2",
-    "mysql2": "^3.6.0",
+    "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
-    "bcryptjs": "^2.4.3"
+    "express": "^4.18.2",
+    "mysql2": "^3.14.4",
+    "sqlstring": "^2.3.3"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"

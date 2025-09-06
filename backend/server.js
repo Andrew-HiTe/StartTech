@@ -50,10 +50,31 @@ app.get('/', (req, res) => {
 // Verifica senhas não criptografadas a cada 1 segundo
 setInterval(AuthController.verificaSenhas, 1000);
 
-app.listen(PORT, () => {
+// Tratamento de erros
+app.on('error', (error) => {
+  console.error('Erro no servidor:', error);
+});
+
+const server = app.listen(PORT, '127.0.0.1', (error) => {
+  if (error) {
+    console.error('Erro ao iniciar servidor:', error);
+    process.exit(1);
+  }
   console.log(`Servidor T-Draw rodando na porta ${PORT}`);
   console.log(`API disponível em: http://localhost:${PORT}/api`);
   console.log(`Frontend disponível em: http://localhost:${PORT}`);
+  
+  // Verificar se o servidor está realmente escutando
+  console.log('Endereço do servidor:', server.address());
+});
+
+server.on('error', (error) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`Porta ${PORT} já está em uso!`);
+  } else {
+    console.error('Erro no servidor:', error);
+  }
+  process.exit(1);
 });
 
 module.exports = app;
