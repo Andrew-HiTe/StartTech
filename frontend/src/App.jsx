@@ -5,7 +5,7 @@ import { ReactFlowProvider } from '@xyflow/react';
 import Home from './components/home/Home.jsx';
 import LoginForm from './components/auth/LoginForm.jsx';
 import AccessManager from './components/access/AccessManager.jsx';
-import DiagramFlow from './components/diagrams/diagrams.jsx';
+import DiagramFlowBasic from './components/diagrams/DiagramFlowBasic.jsx';
 import './App.css';
 
 
@@ -32,9 +32,9 @@ function App() {
           path="/diagram" 
           element={
             <ReactFlowProvider>
-              <DiagramFlow />
+              <DiagramFlowBasic />
             </ReactFlowProvider>
-          } 
+          }
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './LoginForm.css';
+import homelogo from '../../imagens/homelogo.png';
 
 /**
  * Componente que renderiza o formulário de login
@@ -49,8 +50,8 @@ function LoginForm() {
 
       if (data.success) {
         console.log('Login realizado:', data.user);
-        // Redirecionar para o gerenciador de acessos após login
-        navigate('/access-manager');
+  // Redirecionar para a página do diagrama após login
+  navigate('/diagram');
       } else {
         setError(data.message || 'Erro no login');
         setSenha(''); // Limpa a senha quando há erro
@@ -87,8 +88,7 @@ function LoginForm() {
         }}
       >
         <div className="login-container">
-          <img src="/logo.png" alt="Logo" className="logo" />
-          <h1 className="titulo">T-DRAW</h1>
+          <img src={homelogo} alt="Logo" className="logo" />
           
           <input
             type="email"

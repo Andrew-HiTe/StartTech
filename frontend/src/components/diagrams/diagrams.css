@@ -34,4 +34,109 @@
 .read-the-docs {
   color: #888;
 }
+
+/* Estilos para conexões pontilhadas */
+.react-flow__edge-path {
+  stroke-dasharray: 8,4;
+  stroke-width: 2;
+  stroke: #64748b;
+  fill: none;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #3b82f6;
+  stroke-width: 3;
+  stroke-dasharray: 10,5;
+}
+
+.react-flow__connection-line {
+  stroke-dasharray: 8,4;
+  stroke-width: 2;
+  stroke: #64748b;
+  fill: none;
+}
+
+/* Marcadores de seta para conexões */
+.react-flow__edge .react-flow__edge-path {
+  marker-end: url(#react-flow__arrowclosed);
+}
+
+/* Sobrescreve o posicionamento padrão dos handles do ReactFlow */
+.react-flow__handle {
+  border: 1px solid #64748b !important;
+  background: #ffffff !important;
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.8) !important;
+  position: absolute !important;
+  z-index: 10 !important;
+}
+
+/* Handle superior - centralizado horizontalmente */
+.react-flow__handle-top {
+  top: -4px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  margin: 0 !important;
+}
+
+/* Handle inferior - centralizado horizontalmente */
+.react-flow__handle-bottom {
+  bottom: -4px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  margin: 0 !important;
+}
+
+/* Handle esquerdo - centralizado verticalmente */
+.react-flow__handle-left {
+  left: -4px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  margin: 0 !important;
+}
+
+/* Handle direito - centralizado verticalmente */
+.react-flow__handle-right {
+  right: -4px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  margin: 0 !important;
+}
+
+.react-flow__handle.connectable {
+  cursor: crosshair !important;
+}
+
+.react-flow__handle.connecting {
+  background: #3b82f6 !important;
+  border-color: #3b82f6 !important;
+  transform: scale(1.3) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3) !important;
+}
+
+.react-flow__handle:hover {
+  background: #3b82f6 !important;
+  border-color: #3b82f6 !important;
+  transform: scale(1.2) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+}
+
+/* Ajuste específico para handles em nodes customizados */
+.react-flow__node .react-flow__handle-top {
+  transform: translateX(-50%) !important;
+}
+
+.react-flow__node .react-flow__handle-bottom {
+  transform: translateX(-50%) !important;
+}
+
+.react-flow__node .react-flow__handle-left {
+  transform: translateY(-50%) !important;
+}
+
+.react-flow__node .react-flow__handle-right {
+  transform: translateY(-50%) !important;
+}
   

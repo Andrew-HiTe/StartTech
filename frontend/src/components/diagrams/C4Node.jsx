@@ -1,7 +1,7 @@
 // Custom C4 Node Component with proper connection handles
 import React, { useState, useRef, useCallback } from 'react';
 import { Handle, Position, NodeResizer } from '@xyflow/react';
-import { useDiagramStore } from '../../stores/diagramStore';
+import useDiagramStore from '../../stores/diagramStore.js';
 
 export const C4NodeComponent = ({ 
   data, 
@@ -10,11 +10,11 @@ export const C4NodeComponent = ({
   width,
   height
 }) => {
-  const [isEditing, setIsEditing] = useState<'title' | 'description' | null>(null);
+  const [isEditing, setIsEditing] = useState(null);
   const [editValue, setEditValue] = useState('');
   const { updateNodeData } = useDiagramStore();
-  const titleRef = useRef<HTMLDivElement>(null);
-  const descRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef(null);
+  const descRef = useRef(null);
 
   const nodeData = data;
 
@@ -24,7 +24,7 @@ export const C4NodeComponent = ({
   }, [nodeData]);
 
   const handleEditSubmit = useCallback(() => {
-    if (isEditing && typeof id === 'string') {
+    if (isEditing && id) {
       updateNodeData(id, { [isEditing]: editValue });
       setIsEditing(null);
     }
@@ -86,20 +86,11 @@ export const C4NodeComponent = ({
         />
       )}
 
-      {/* Connection Handles - Otimizados para melhor detecção */}
-      {/* Handles Source - Origem das conexões */}
+      {/* Connection Handles - Handles centralizados com transform */}
       <Handle
         type="source"
         position={Position.Top}
         id="top"
-        className="w-4 h-4 bg-blue-500 border-2 border-white rounded-full hover:bg-blue-600 hover:scale-110 transition-all duration-200"
-        style={{ 
-          top: '-8px', 
-          left: '50%', 
-          transform: 'translateX(-50%)',
-          position: 'absolute',
-          zIndex: 10
-        }}
         isConnectable={true}
       />
 
@@ -107,14 +98,6 @@ export const C4NodeComponent = ({
         type="source"
         position={Position.Right}
         id="right"
-        className="w-4 h-4 bg-blue-500 border-2 border-white rounded-full hover:bg-blue-600 hover:scale-110 transition-all duration-200"
-        style={{ 
-          right: '-8px', 
-          top: '50%', 
-          transform: 'translateY(-50%)',
-          position: 'absolute',
-          zIndex: 10
-        }}
         isConnectable={true}
       />
 
@@ -122,14 +105,6 @@ export const C4NodeComponent = ({
         type="source"
         position={Position.Bottom}
         id="bottom"
-        className="w-4 h-4 bg-blue-500 border-2 border-white rounded-full hover:bg-blue-600 hover:scale-110 transition-all duration-200"
-        style={{ 
-          bottom: '-8px', 
-          left: '50%', 
-          transform: 'translateX(-50%)',
-          position: 'absolute',
-          zIndex: 10
-        }}
         isConnectable={true}
       />
 
@@ -137,79 +112,8 @@ export const C4NodeComponent = ({
         type="source"
         position={Position.Left}
         id="left"
-        className="w-4 h-4 bg-blue-500 border-2 border-white rounded-full hover:bg-blue-600 hover:scale-110 transition-all duration-200"
-        style={{ 
-          left: '-8px', 
-          top: '50%', 
-          transform: 'translateY(-50%)',
-          position: 'absolute',
-          zIndex: 10
-        }}
         isConnectable={true}
-      />
-
-      {/* Handles Target - Destino das conexões (invisíveis mas ativos) */}
-      <Handle
-        type="target"
-        position={Position.Top}
-        id="top-target"
-        className="w-4 h-4 bg-transparent border-transparent"
-        style={{ 
-          top: '-8px', 
-          left: '50%', 
-          transform: 'translateX(-50%)',
-          position: 'absolute',
-          zIndex: 10
-        }}
-        isConnectable={true}
-      />
-
-      <Handle
-        type="target"
-        position={Position.Right}
-        id="right-target"
-        className="w-4 h-4 bg-transparent border-transparent"
-        style={{ 
-          right: '-8px', 
-          top: '50%', 
-          transform: 'translateY(-50%)',
-          position: 'absolute',
-          zIndex: 10
-        }}
-        isConnectable={true}
-      />
-
-      <Handle
-        type="target"
-        position={Position.Bottom}
-        id="bottom-target"
-        className="w-4 h-4 bg-transparent border-transparent"
-        style={{ 
-          bottom: '-8px', 
-          left: '50%', 
-          transform: 'translateX(-50%)',
-          position: 'absolute',
-          zIndex: 10
-        }}
-        isConnectable={true}
-      />
-
-      <Handle
-        type="target"
-        position={Position.Left}
-        id="left-target"
-        className="w-4 h-4 bg-transparent border-transparent"
-        style={{ 
-          left: '-8px', 
-          top: '50%', 
-          transform: 'translateY(-50%)',
-          position: 'absolute',
-          zIndex: 10
-        }}
-        isConnectable={true}
-      />
-
-      {/* Node Header */}
+      />      {/* Node Header */}
       <div className={`px-3 py-2 rounded-t-lg border-b ${getHeaderColor()}`}>
         {isEditing === 'title' ? (
           <input

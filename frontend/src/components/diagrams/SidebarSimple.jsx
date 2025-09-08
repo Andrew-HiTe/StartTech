@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Modal } from './Modal';
-import { useDiagramManager, formatTimeAgo } from '../../stores/diagramManager';
+import { useDiagramManager, formatTimeAgo } from '../../stores/diagramManager.js';
 
 // Importações de assets para Vite
-import totvsLogo from '../../assets/logo-totvs-azul-escuro.svg';
+import homelogo from '../../imagens/homelogo.png';
 import totvsSymbol from '../../assets/totvs-symbol.svg';
 import diagramIcon from '../../assets/diagram-icon.svg';
 import lupaIcon from '../../assets/lupa-1.svg';
@@ -12,7 +12,7 @@ import usersIcon from '../../assets/users-icon.svg';
 
 
 
-function Sidebar({ isMinimized, onToggle }) {
+function Sidebar({ isMinimized, onToggle, onLoadDiagram }) {
   // Zustand store
   const {
     currentDiagramId,
@@ -45,19 +45,16 @@ function Sidebar({ isMinimized, onToggle }) {
         {!isMinimized ? (
           <div className="flex items-center justify-between">
             <div className="flex flex-col items-center flex-1">
-              {/* Logo TOTVS */}
+              {/* Logo T-Draw */}
               <img 
-                src={totvsLogo}
-                alt="TOTVS Logo" 
-                className="w-30 h-26 mb-2 filter brightness-0 invert"
+                src={homelogo}
+                alt="T-Draw Logo" 
+                className="w-30 h-26 mb-2"
                 onError={(e) => {
                   e.currentTarget.src = "/src/assets/logo-totvs-fallback.png";
                   e.currentTarget.className = "w-18 h-16 mb-2";
                 }}
               />
-              <h1 className="text-white font-extrabold text-xl" style={{ fontFamily: 'Nunito Sans, sans-serif' }}>
-                T-Draw
-              </h1>
             </div>
             {/* Botão X para fechar */}
             <button
@@ -72,12 +69,6 @@ function Sidebar({ isMinimized, onToggle }) {
           </div>
         ) : (
           <div className="flex flex-col items-center">
-            {/* Símbolo TOTVS quando minimizado */}
-            <img 
-              src={totvsSymbol} 
-              alt="TOTVS Symbol" 
-              className="w-8 h-8 mb-2 filter brightness-0 invert"
-            />
             {/* Botão menu hambúrguer quando minimizado */}
             <button
               onClick={onToggle}
@@ -205,6 +196,20 @@ function Sidebar({ isMinimized, onToggle }) {
             title="Criar Diagrama"
           >
             <span className="text-xl">📊</span>
+          </button>
+          
+          {/* Botão Gerenciar Acessos na sidebar minimizada */}
+          <div className="flex-1"></div> {/* Spacer para empurrar o botão para baixo */}
+          <button
+            onClick={() => setIsAccessModalOpen(true)}
+            className="text-white hover:bg-blue-600 p-2 rounded transition-colors"
+            title="Gerenciar Acessos"
+          >
+            <img 
+              src={usersIcon} 
+              alt="Gerenciar Acessos" 
+              className="w-5 h-5 filter brightness-0 invert"
+            />
           </button>
         </div>
       )}

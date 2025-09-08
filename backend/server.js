@@ -9,9 +9,11 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
+const db = require('./config/database');
 const AuthController = require('./controllers/AuthController');
 const authRoutes = require('./routes/authRoutes');
 const accessRoutes = require('./routes/accessRoutes');
+const diagramRoutes = require('./routes/diagramRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -26,6 +28,7 @@ app.use(express.static(path.join(__dirname, '../frontend/build')));
 // Rotas da API
 app.use('/api/auth', authRoutes);
 app.use('/api/access', accessRoutes);
+app.use('/api/diagrams', diagramRoutes);
 
 // Rota básica para verificar se o servidor está funcionando
 app.get('/api/health', (req, res) => {
@@ -42,13 +45,30 @@ app.get('/', (req, res) => {
     endpoints: {
       auth: '/api/auth/login',
       access: '/api/access/*',
+      diagrams: '/api/diagrams/*',
       health: '/api/health'
     }
   });
 });
 
-// Verifica senhas não criptografadas a cada 1 segundo
-setInterval(AuthController.verificaSenhas, 1000);
+// Verifica senhas não criptografadas a cada 30 segundos (reduzido de 1 segundo)
+// Timer apenas para verificação periódica, não crítico para funcionamento
+let senhaVerificationTimer = setInterval(() => {
+  // Verificar se há conexão ativa antes de executar
+  if (db && typeof db.execute === 'function') {
+    AuthController.verificaSenhas().catch(error => {
+      console.log('Verificação de senhas pulada devido a erro de conexão');
+      // Se houver muitos erros consecutivos, pausar o timer temporariamente
+      if (error.message && error.message.includes('closed state')) {
+        console.log('Pausando verificação de senhas por 60 segundos devido a conexão fechada');
+        clearInterval(senhaVerificationTimer);
+        setTimeout(() => {
+          senhaVerificationTimer = setInterval(arguments.callee, 30000);
+        }, 60000);
+      }
+    });
+  }
+}, 30000); // 30 segundos ao invés de 1 segundo
 
 // Tratamento de erros
 app.on('error', (error) => {
