@@ -1,8 +1,25 @@
+/* CSS específico para páginas de landing/login */
+.page-home, .page-login {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+/* CSS para o diagrama - mantém layout original do projetobase */
+.diagram-app {
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* CSS original do projetobase */
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
 }
 
 .logo {
