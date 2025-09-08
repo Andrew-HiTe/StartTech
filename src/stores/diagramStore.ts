@@ -103,8 +103,12 @@ export const useDiagramStore = create<DiagramState & DiagramActions>((set, get) 
       sourceHandle: 'right',
       targetHandle: 'left-target',
       type: 'smoothstep',
-      animated: false, // Desabilitar animação para melhor performance
-      style: { stroke: '#2196f3', strokeWidth: 3 }
+      animated: false,
+      style: { 
+        stroke: '#2196f3', 
+        strokeWidth: 2,
+        strokeDasharray: '8,4' // Linha pontilhada
+      }
     },
     {
       id: 'e2-3',
@@ -113,8 +117,12 @@ export const useDiagramStore = create<DiagramState & DiagramActions>((set, get) 
       sourceHandle: 'bottom',
       targetHandle: 'top-target',
       type: 'smoothstep',
-      animated: false, // Desabilitar animação para melhor performance
-      style: { stroke: '#2196f3', strokeWidth: 3 }
+      animated: false,
+      style: { 
+        stroke: '#2196f3', 
+        strokeWidth: 2,
+        strokeDasharray: '8,4' // Linha pontilhada
+      }
     }
   ],
   selectedElements: [],
@@ -128,6 +136,17 @@ export const useDiagramStore = create<DiagramState & DiagramActions>((set, get) 
   setEdges: (edges) => set({ edges }),
   
   onNodesChange: (changes) => {
+    // Log das mudanças para debug
+    changes.forEach(change => {
+      if (change.type === 'position' && change.position) {
+        console.log(`📍 Nó ${change.id} movido para:`, change.position);
+      } else if (change.type === 'select') {
+        console.log(`🎯 Nó ${change.id} ${change.selected ? 'selecionado' : 'desselecionado'}`);
+      } else if (change.type === 'dimensions' && change.dimensions) {
+        console.log(`📏 Nó ${change.id} redimensionado:`, change.dimensions);
+      }
+    });
+
     set({
       nodes: applyNodeChanges(changes, get().nodes) as C4Node[]
     });
@@ -142,24 +161,27 @@ export const useDiagramStore = create<DiagramState & DiagramActions>((set, get) 
   onConnect: (connection) => {
     const { source, target, sourceHandle, targetHandle } = connection;
     
-    // Validações mais rigorosas
-    if (!source || !target || source === target) {
-      console.log('❌ Conexão inválida:', { source, target, sourceHandle, targetHandle });
+    // Validações rigorosas
+    if (!source || !target) {
+      console.log('❌ Conexão inválida: source ou target ausente');
+      return;
+    }
+    
+    if (source === target) {
+      console.log('❌ Conexão inválida: tentativa de conectar nó a si mesmo');
       return;
     }
     
     console.log('🔄 Processando conexão:', { source, target, sourceHandle, targetHandle });
     
-    // Verificar se já existe uma conexão entre os mesmos nós e handles específicos
-    const existingEdge = get().edges.find(edge => 
-      edge.source === source && 
-      edge.target === target &&
-      edge.sourceHandle === sourceHandle &&
-      edge.targetHandle === targetHandle
+    // Verificar se já existe uma conexão entre os mesmos nós (independente dos handles)
+    const existingConnection = get().edges.find(edge => 
+      (edge.source === source && edge.target === target) ||
+      (edge.source === target && edge.target === source)
     );
     
-    if (existingEdge) {
-      console.log('⚠️ Conexão já existe, ignorando');
+    if (existingConnection) {
+      console.log('⚠️ Conexão já existe entre estes nós, ignorando');
       return;
     }
     
@@ -171,13 +193,12 @@ export const useDiagramStore = create<DiagramState & DiagramActions>((set, get) 
       targetHandle: targetHandle || undefined,
       type: 'smoothstep',
       animated: false,
-      style: { stroke: '#2196f3', strokeWidth: 3 },
-      markerEnd: {
-        type: 'arrowclosed',
-        width: 20,
-        height: 20,
-        color: '#2196f3'
+      style: { 
+        stroke: '#2196f3', 
+        strokeWidth: 2,
+        strokeDasharray: '8,4' // Linha pontilhada
       }
+      // Removido markerEnd para não ter setas
     };
     
     // Usar a função addEdge do ReactFlow para garantir compatibilidade
