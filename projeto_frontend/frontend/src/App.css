@@ -1,0 +1,22 @@
+/**
+ * Estilos principais da aplicação T-Draw
+ * Unifica estilos de todos os componentes
+ */
+
+/* Reset e configurações gerais */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Nunito Sans', sans-serif;
+}
+
+.App {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
