@@ -9,7 +9,6 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
-const db = require('./config/database');
 const AuthController = require('./controllers/AuthController');
 const authRoutes = require('./routes/authRoutes');
 const accessRoutes = require('./routes/accessRoutes');
@@ -51,24 +50,8 @@ app.get('/', (req, res) => {
   });
 });
 
-// Verifica senhas não criptografadas a cada 30 segundos (reduzido de 1 segundo)
-// Timer apenas para verificação periódica, não crítico para funcionamento
-let senhaVerificationTimer = setInterval(() => {
-  // Verificar se há conexão ativa antes de executar
-  if (db && typeof db.execute === 'function') {
-    AuthController.verificaSenhas().catch(error => {
-      console.log('Verificação de senhas pulada devido a erro de conexão');
-      // Se houver muitos erros consecutivos, pausar o timer temporariamente
-      if (error.message && error.message.includes('closed state')) {
-        console.log('Pausando verificação de senhas por 60 segundos devido a conexão fechada');
-        clearInterval(senhaVerificationTimer);
-        setTimeout(() => {
-          senhaVerificationTimer = setInterval(arguments.callee, 30000);
-        }, 60000);
-      }
-    });
-  }
-}, 30000); // 30 segundos ao invés de 1 segundo
+// Verifica senhas não criptografadas - DESABILITADO para evitar problemas de performance
+// setInterval(AuthController.verificaSenhas, 1000);
 
 // Tratamento de erros
 app.on('error', (error) => {

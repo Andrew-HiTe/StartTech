@@ -4,78 +4,61 @@ import diagramService from '../services/diagramService.js';
 const generateId = () => `diagram_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
 export const useDiagramManager = create((set, get) => ({
-  // Initial state with mock data
-  diagrams: [
-    {
-      id: 'diagram_1',
-      name: 'Sistema Principal',
-      type: 'c4',
-      createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-      lastModified: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-      isActive: true,
-      nodes: [],
-      edges: [],
-      shareSettings: {
-        users: ['admin@totvs.com', 'user1@totvs.com'],
-        isPublic: false
-      }
-    },
-    {
-      id: 'diagram_2',
-      name: 'Módulo Financeiro',
-      type: 'flowchart',
-      createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
-      lastModified: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-      isActive: false,
-      nodes: [],
-      edges: [],
-      shareSettings: {
-        users: ['admin@totvs.com'],
-        isPublic: false
-      }
-    },
-    {
-      id: 'diagram_3',
-      name: 'Dashboard Analytics',
-      type: 'uml',
-      createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 1 week ago
-      lastModified: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-      isActive: false,
-      nodes: [],
-      edges: [],
-      shareSettings: {
-        users: ['admin@totvs.com', 'user2@totvs.com'],
-        isPublic: true
-      }
-    }
-  ],
-  currentDiagramId: 'diagram_1',
+  // Initial state - carregará do banco de dados
+  diagrams: [],
+  currentDiagramId: null,
   searchTerm: '',
+  isLoading: false,
+  error: null,
   isInitialized: false,
 
-  // Inicializar diagramas mock no banco (desabilitado temporariamente para debug)
-  initializeMockDiagrams: async () => {
-    const { diagrams, isInitialized } = get();
-    
-    if (isInitialized) return;
-
-    console.log('🔧 Inicialização de diagramas mock desabilitada para debug');
-    set({ isInitialized: true });
-    
-    // Código de inicialização comentado temporariamente
-    /*
+  // Carregar diagramas do banco de dados
+  loadDiagramsFromDatabase: async () => {
     try {
-      for (const diagram of diagrams) {
-        await diagramService.createDiagramTable(diagram.id, diagram.name);
-        console.log(`✅ Diagrama mock ${diagram.name} inicializado no banco`);
+      set({ isLoading: true, error: null });
+      
+      const response = await fetch('http://localhost:5000/api/diagrams/list');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      set({ isInitialized: true });
-      console.log('✅ Todos os diagramas mock inicializados');
+      const data = await response.json();
+      if (data.success && data.diagrams) {
+        const formattedDiagrams = data.diagrams.map(diagram => ({
+          id: diagram.id,
+          name: diagram.name,
+          type: 'table',
+          tableName: diagram.table_name,
+          createdAt: new Date(diagram.created_at),
+          lastModified: new Date(diagram.updated_at),
+          isActive: false,
+          nodes: [],
+          edges: [],
+          shareSettings: {
+            users: ['admin@totvs.com'],
+            isPublic: false
+          }
+        }));
+        
+        set({ 
+          diagrams: formattedDiagrams, 
+          isLoading: false,
+          isInitialized: true 
+        });
+        
+        console.log(`✅ ${formattedDiagrams.length} diagramas carregados do banco de dados`);
+      } else {
+        set({ diagrams: [], isLoading: false, isInitialized: true });
+      }
     } catch (error) {
-      console.error('❌ Erro ao inicializar diagramas mock:', error);
+      console.error('❌ Erro ao carregar diagramas do banco:', error);
+      set({ 
+        error: error.message, 
+        isLoading: false, 
+        diagrams: [],
+        isInitialized: true 
+      });
     }
-    */
   },
 
   // Actions
@@ -161,6 +144,10 @@ export const useDiagramManager = create((set, get) => ({
       })),
       currentDiagramId: id
     }));
+    
+    // Sincronizar com sessionStorage para o componente principal
+    sessionStorage.setItem('activeDiagramId', id);
+    console.log(`🔄 Diagrama selecionado: ${id}`);
   },
 
   updateDiagramName: (id, name) => {

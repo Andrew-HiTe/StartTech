@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Modal } from './Modal';
 import { useDiagramManager, formatTimeAgo } from '../../stores/diagramManager.js';
 
@@ -23,8 +23,15 @@ function Sidebar({ isMinimized, onToggle, onLoadDiagram }) {
     getFilteredDiagrams,
     addUserAccess,
     removeUserAccess,
-    getCurrentDiagram
+    getCurrentDiagram,
+    loadDiagramsFromDatabase,
+    isLoading
   } = useDiagramManager();
+
+  // Carregar diagramas do banco quando o componente monta
+  useEffect(() => {
+    loadDiagramsFromDatabase();
+  }, [loadDiagramsFromDatabase]);
 
   // Local state for modals
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -146,7 +153,18 @@ function Sidebar({ isMinimized, onToggle, onLoadDiagram }) {
               <h3 className="text-white text-xs font-semibold mb-3 opacity-75">
                 DIAGRAMAS RECENTES
               </h3>
-              {getFilteredDiagrams().map((diagram) => (
+              {isLoading ? (
+                <div className="text-center text-blue-200 py-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
+                  <p className="text-sm">Carregando diagramas...</p>
+                </div>
+              ) : getFilteredDiagrams().length === 0 ? (
+                <div className="text-center text-blue-200 py-4">
+                  <p className="text-sm">Nenhum diagrama encontrado</p>
+                  <p className="text-xs opacity-75 mt-1">Crie um novo diagrama para começar</p>
+                </div>
+              ) : (
+                getFilteredDiagrams().map((diagram) => (
                   <button
                     key={diagram.id}
                     onClick={() => selectDiagram(diagram.id)}
@@ -166,7 +184,8 @@ function Sidebar({ isMinimized, onToggle, onLoadDiagram }) {
                       </div>
                     </div>
                   </button>
-                ))}
+                ))
+              )}
             </div>
           </div>
 

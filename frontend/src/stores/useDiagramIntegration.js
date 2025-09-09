@@ -12,7 +12,7 @@ export const useDiagramIntegration = () => {
     currentDiagramId, 
     getCurrentDiagram, 
     saveDiagramData, 
-    initializeMockDiagrams 
+    loadDiagramsFromDatabase 
   } = useDiagramManager();
   const { 
     loadDiagramData, 

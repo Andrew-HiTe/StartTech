@@ -12,7 +12,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { C4NodeComponent } from './C4Node.jsx';
-import OffsetEdge from './OffsetEdge.jsx';
+import OffsetEdge from './OffsetEdge';
 import { Sidebar } from './SidebarSimple.jsx';
 import './index.css';
 import './diagrams.css';
@@ -35,164 +35,130 @@ const DiagramFlowBasic = () => {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [diagramName, setDiagramName] = useState('Meu Diagrama');
   const [isSidebarMinimized, setIsSidebarMinimized] = useState(false);
+  const [currentDiagramId, setCurrentDiagramId] = useState(null);
 
-  // Carregar dados salvos quando a página carrega
+  // Função para carregar um diagrama específico
+  const loadDiagramById = async (diagramId) => {
+    try {
+      console.log(`🔧 Carregando diagrama: ${diagramId}`);
+      const response = await fetch(`http://localhost:5000/api/diagrams/${diagramId}/full`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.diagram) {
+          setNodes(data.diagram.nodes || []);
+          setEdges(data.diagram.edges || []);
+          setDiagramName(data.diagram.name || 'Diagrama sem nome');
+          setCurrentDiagramId(diagramId);
+          console.log(`✅ Diagrama carregado: ${data.diagram.name}`);
+          return true;
+        }
+      }
+      return false;
+    } catch (error) {
+      console.error('❌ Erro ao carregar diagrama:', error);
+      return false;
+    }
+  };
+
+  // Listener para mudanças no sessionStorage (seleção de diagrama)
   useEffect(() => {
-    const loadSavedData = async () => {
-      try {
-        // Primeiro, tentar carregar do localStorage
-        const savedDiagram = localStorage.getItem('currentDiagram');
-        console.log('LocalStorage raw data:', savedDiagram);
-        
-        if (savedDiagram) {
-          const diagramData = JSON.parse(savedDiagram);
-          console.log('Dados do localStorage carregados:', diagramData);
-          
-          if (diagramData.nodes && diagramData.nodes.length > 0) {
-            console.log('Tentando carregar nodes:', diagramData.nodes);
-            // Usar setTimeout para garantir que o componente esteja totalmente montado
-            setTimeout(() => {
-              setNodes(diagramData.nodes);
-              console.log('Nodes aplicados:', diagramData.nodes.length);
-            }, 100);
-          }
-          
-          if (diagramData.edges && diagramData.edges.length > 0) {
-            console.log('Tentando carregar edges:', diagramData.edges);
-            setTimeout(() => {
-              setEdges(diagramData.edges);
-              console.log('Edges aplicados:', diagramData.edges.length);
-            }, 100);
-          }
-          
-          if (diagramData.diagramName) {
-            setDiagramName(diagramData.diagramName);
-            console.log('Nome do diagrama carregado:', diagramData.diagramName);
-          }
-          
-          console.log('Dados carregados do localStorage com sucesso');
-          return;
-        }
-
-        console.log('Nenhum dado encontrado no localStorage');
-
-        // Se não há dados no localStorage, tentar carregar do backend
-        const response = await fetch('http://localhost:5000/api/diagrams/list');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.diagrams.length > 0) {
-            // Carregar o diagrama mais recente
-            const latestDiagram = data.diagrams[0];
-            setDiagramName(latestDiagram.name);
-            console.log('Diagrama encontrado no backend:', latestDiagram.name);
-            
-            // Tentar reconstruir os nodes baseado na tabela do diagrama
-            // Por enquanto, apenas definir o nome
-          }
-        }
-      } catch (error) {
-        console.log('Erro ao carregar dados:', error);
+    const checkForDiagramChange = () => {
+      const storedId = sessionStorage.getItem('activeDiagramId');
+      if (storedId && storedId !== currentDiagramId) {
+        console.log(`🔄 Detectada mudança de diagrama: ${storedId}`);
+        loadDiagramById(storedId);
       }
     };
 
-    loadSavedData();
-  }, []); // Executa apenas uma vez quando o componente monta
-
-  // Salvar dados automaticamente quando há mudanças
-  useEffect(() => {
-    const saveData = () => {
-      const diagramData = {
-        nodes,
-        edges,
-        diagramName,
-        timestamp: new Date().toISOString()
-      };
-      localStorage.setItem('currentDiagram', JSON.stringify(diagramData));
-      console.log('Dados salvos no localStorage:', diagramData);
-    };
-
-    // Só salva se há pelo menos um node ou edge
-    if (nodes.length > 0 || edges.length > 0) {
-      saveData();
+    // Carregar diagrama inicial
+    const initialId = sessionStorage.getItem('activeDiagramId');
+    if (initialId && !currentDiagramId) {
+      loadDiagramById(initialId);
     }
-  }, [nodes, edges, diagramName]);
 
-  // Integração automática with banco de dados
-  useEffect(() => {
-    const syncWithDatabase = async () => {
+    // Verificar mudanças periódicas
+    const interval = setInterval(checkForDiagramChange, 1000);
+
+    return () => clearInterval(interval);
+  }, [currentDiagramId]);
+
+  // Função para salvar mudanças no diagrama
+  const saveToDatabase = async (nodesToSave, edgesToSave) => {
+    let diagramId = currentDiagramId;
+
+    // Se não há diagrama ativo, criar um novo
+    if (!diagramId) {
       try {
-        // Registrar o diagrama no backend primeiro
-        const diagramId = `diagram_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        diagramId = `diagram_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         
-        const createDiagramResponse = await fetch('http://localhost:5000/api/diagrams/create-table', {
+        const createResponse = await fetch('http://localhost:5000/api/diagrams/create-table', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            diagramId,
-            diagramName,
-            timestamp: new Date().toISOString()
+          body: JSON.stringify({
+            diagramId: diagramId,
+            diagramName: diagramName,
+            timestamp: Date.now()
           })
         });
 
-        if (createDiagramResponse.ok) {
-          console.log('Diagrama registrado no backend');
-        }
-
-        // Para cada node que é uma tabela, criar/atualizar no banco
-        const tableNodes = nodes.filter(node => node.type === 'c4Node' && node.data?.tableName);
-        
-        for (const node of tableNodes) {
-          const { tableName, fields = [] } = node.data;
-          
-          // Verificar se a tabela já existe
-          const checkTableQuery = `SHOW TABLES LIKE '${tableName}'`;
-          const tableExists = await fetch('http://localhost:5000/api/execute-query', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: checkTableQuery })
-          });
-          
-          const tableExistsResult = await tableExists.json();
-          
-          if (!tableExistsResult.results || tableExistsResult.results.length === 0) {
-            // Criar tabela no banco se não existir
-            const createTableQuery = `
-              CREATE TABLE IF NOT EXISTS \`${tableName}\` (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                ${fields.filter(f => f.name !== 'id').map(field => 
-                  `\`${field.name}\` ${field.type || 'VARCHAR(255)'}`
-                ).join(',\n                ')}
-              )
-            `;
-            
-            await fetch('http://localhost:5000/api/execute-query', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ query: createTableQuery })
-            });
-
-            // Inserir dados de exemplo
-            const insertQuery = `
-              INSERT INTO \`${tableName}\` (nome) 
-              VALUES ('Exemplo 1'), ('Exemplo 2')
-            `;
-            
-            await fetch('http://localhost:5000/api/execute-query', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ query: insertQuery })
-            });
-          }
+        if (createResponse.ok) {
+          setCurrentDiagramId(diagramId);
+          sessionStorage.setItem('activeDiagramId', diagramId);
+          console.log(`🆕 Novo diagrama criado: ${diagramId}`);
+        } else {
+          console.error('❌ Falha ao criar diagrama');
+          return;
         }
       } catch (error) {
-        console.log('Database sync skipped:', error.message);
+        console.error('❌ Erro ao criar diagrama:', error);
+        return;
       }
-    };
-
-    if (nodes.length > 0) {
-      syncWithDatabase();
     }
-  }, [nodes]);
+
+    try {
+      // Salvar cada nó/tabela no banco
+      for (const node of nodesToSave) {
+        if (node.type === 'c4Node' && node.data?.tableName) {
+          const nodeData = {
+            diagramId: diagramId,
+            nodeId: node.id,
+            nodeName: node.data.tableName,
+            nodeType: 'table',
+            nodeDescription: node.data.description || '',
+            fields: node.data.fields || [],
+            position: node.position,
+            style: {
+              width: node.style?.width || 200,
+              height: node.style?.height || 150
+            }
+          };
+
+          await fetch('http://localhost:5000/api/diagrams/add-table-item', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(nodeData)
+          });
+        }
+      }
+
+      console.log(`💾 Salvamento automático realizado para ${nodesToSave.length} nós`);
+    } catch (error) {
+      console.error('❌ Erro ao salvar no banco:', error);
+    }
+  };
+
+  // Auto-save quando os nós mudarem
+  useEffect(() => {
+    if (nodes.length > 0 && currentDiagramId) {
+      // Debounce - salvar apenas após 2 segundos sem mudanças
+      const timeoutId = setTimeout(() => {
+        saveToDatabase(nodes, edges);
+      }, 2000);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [nodes, edges, currentDiagramId]);
 
   // Conectar edges
   const onConnect = useCallback(
@@ -233,24 +199,6 @@ const DiagramFlowBasic = () => {
     setNodes([]);
     setEdges([]);
   }, [setNodes, setEdges]);
-
-  // Função de teste para debug
-  const testLocalStorage = useCallback(() => {
-    const savedData = localStorage.getItem('currentDiagram');
-    console.log('Teste localStorage:', savedData);
-    
-    if (savedData) {
-      const data = JSON.parse(savedData);
-      console.log('Dados encontrados:', data);
-      
-      if (data.nodes && data.nodes.length > 0) {
-        console.log('Forçando aplicação dos nodes:', data.nodes);
-        setNodes(data.nodes);
-      }
-    } else {
-      console.log('Nenhum dado encontrado no localStorage');
-    }
-  }, [setNodes]);
 
   // Exportar JSON
   const handleExportJson = useCallback(() => {
@@ -336,13 +284,6 @@ const DiagramFlowBasic = () => {
                   className="px-3 py-2 text-sm rounded-md transition-colors bg-blue-500 text-white hover:bg-blue-600"
                 >
                   Adicionar Tabela
-                </button>
-                <button
-                  onClick={testLocalStorage}
-                  className="px-3 py-2 text-sm rounded-md transition-colors bg-purple-500 text-white hover:bg-purple-600"
-                  title="Testar localStorage"
-                >
-                  Debug
                 </button>
                 <button
                   onClick={handleClear}
