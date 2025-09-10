@@ -1,6 +1,6 @@
 // App.jsx
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { ReactFlowProvider } from '@xyflow/react';
 import Home from './components/home/Home.jsx';
 import LoginForm from './components/auth/LoginForm.jsx';
@@ -12,6 +12,7 @@ import './App.css';
 // Importar imagens
 import homelogo from './imagens/homelogo.png';
 import diagrama from './imagens/diagrama.jpg';
+import valores from './imagens/valores.png';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
             <Home 
               imagem={homelogo}
               diag={diagrama}
+              valorestdraw={valores}
             />
           } 
         />

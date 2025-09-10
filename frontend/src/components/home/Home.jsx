@@ -9,8 +9,9 @@ import Header from '../shared/Header/index';
 import ListaSuspensa from '../shared/ListaSuspensa';
 import Text from '../shared/Text';
 import './Home.css';
+import SobreNos from '../shared/SobreNos';
 
-const Home = ({ imagem, diag }) => {
+const Home = ({ imagem, diag, valorestdraw }) => {
   const navigate = useNavigate();
 
   const handleShowLogin = () => {
@@ -26,6 +27,7 @@ const Home = ({ imagem, diag }) => {
         diagrama={diag}
       />
       <ListaSuspensa />
+      <SobreNos valores={valorestdraw}/>
     </div>
   );
 };
