@@ -1,0 +1,117 @@
+/* Estilos otimizados para DiagramPage */
+
+/* Garantir que não haja scroll na página principal */
+.diagram-container {
+  height: 100vh;
+  overflow: hidden;
+}
+
+.diagram-main {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.diagram-content {
+  flex: 1;
+  min-height: 0;
+}
+
+.diagram-flow {
+  width: 100%;
+  height: 100%;
+}
+
+/* Header otimizado */
+.header-optimized {
+  flex-shrink: 0;
+  border-bottom: 1px solid #e5e7eb;
+  background-color: white;
+  z-index: 5;
+}
+
+/* Sidebar com melhor posicionamento */
+.sidebar-fixed {
+  background-color: #0457A7;
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  z-index: 10;
+}
+
+/* Ajustar margin do conteúdo principal baseado na sidebar */
+.diagram-main {
+  transition: margin-left 0.3s ease;
+}
+
+/* Largura da sidebar quando expandida */
+.w-80 {
+  width: 20rem; /* 320px */
+}
+
+/* Toolbar centralizada */
+.toolbar-panel {
+  margin-top: 20px;
+}
+
+/* Melhorar performance do React Flow */
+.react-flow__node {
+  cursor: grab;
+}
+
+.react-flow__node:active {
+  cursor: grabbing;
+}
+
+.react-flow__edge {
+  cursor: pointer;
+}
+
+/* Estilos para toolbar centralizada */
+.react-flow__panel.react-flow__panel-top {
+  justify-content: center;
+  width: 100%;
+}
+
+/* Ajustes para controls */
+.react-flow__controls {
+  bottom: 20px;
+  left: 20px;
+}
+
+/* Ajustes para minimap */
+.react-flow__minimap {
+  bottom: 20px;
+  right: 20px;
+}
+
+/* Responsividade para telas menores */
+@media (max-width: 768px) {
+  .diagram-main {
+    margin-left: 0 !important;
+  }
+  
+  .sidebar-fixed {
+    width: 100% !important;
+    max-width: 320px;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+  
+  .sidebar-fixed.open {
+    transform: translateX(0);
+  }
+}
+
+/* Remover qualquer scroll global */
+html, body {
+  overflow: hidden;
+}
+
+/* Garantir que o React Flow ocupe todo o espaço disponível */
+.react-flow {
+  width: 100%;
+  height: 100%;
+}

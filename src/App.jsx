@@ -18,6 +18,11 @@ import DiagramApp from './DiagramApp.jsx';
 // Hook para gerenciar autenticação
 import { AuthProvider, useAuth } from './hooks/useAuth.jsx';
 
+// Importar imagens
+import homelogo from './assets/images/homelogo.png';
+import diagrama from './assets/images/diagrama.jpg';
+import valores from './assets/images/valores.png';
+
 // Componente de proteção de rotas
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -48,7 +53,16 @@ function App() {
         <div className="App">
           <Routes>
             {/* Página inicial */}
-            <Route path="/" element={<Home />} />
+            <Route 
+              path="/" 
+              element={
+                <Home 
+                  imagem={homelogo}
+                  diag={diagrama}
+                  valorestdraw={valores}
+                />
+              } 
+            />
             
             {/* Login */}
             <Route path="/login" element={<LoginForm />} />
