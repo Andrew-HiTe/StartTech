@@ -13,7 +13,7 @@ import { LoginForm } from './components/auth/LoginForm';
 import { AccessManager } from './components/AccessManager.jsx';
 
 // Componente do diagrama (convertendo para JSX)
-import DiagramApp from './DiagramApp.jsx';
+import DiagramApp from '../components/diagram/DiagramApp.jsx';
 
 // Hook para gerenciar autenticação
 import { useAuth } from './hooks/useAuth.jsx';

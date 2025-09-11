@@ -16,15 +16,15 @@ import {
   ConnectionLineType,
 } from '@xyflow/react';
 
-import { useDiagramStore } from './stores/diagramStore.js';
-import { useDiagramIntegration } from './stores/useDiagramIntegration.js';
-import { useDiagramManager } from './stores/diagramManager.js';
-import { C4NodeComponent } from './components/C4Node.jsx';
-import { Toolbar } from './components/Toolbar.jsx';
-import { Sidebar } from './components/SidebarSimple.jsx';
-import { Header } from './components/Header.jsx';
-import { ToastContainer } from './components/Toast.jsx';
-import { useToast } from './hooks/useToast.js';
+import { useDiagramStore } from '../../stores/diagramStore.js';
+import { useDiagramIntegration } from '../../stores/useDiagramIntegration.js';
+import { useDiagramManager } from '../../stores/diagramManager.js';
+import { C4NodeComponent } from '../../components/C4Node.jsx';
+import { Toolbar } from '../../components/Toolbar.jsx';
+import { Sidebar } from '../../components/SidebarSimple.jsx';
+import { Header } from '../../components/Header.jsx';
+import { ToastContainer } from '../../components/Toast.jsx';
+import { useToast } from '../../hooks/useToast.js';
 
 const nodeTypes = {
   c4Node: C4NodeComponent,

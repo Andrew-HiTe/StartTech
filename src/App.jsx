@@ -6,6 +6,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ReactFlowProvider } from '@xyflow/react';
+import './styles/App.css';
 
 // Importar páginas
 import { Home } from './components/home/Home.jsx';
@@ -13,7 +14,7 @@ import { LoginForm } from './components/auth/LoginForm.jsx';
 import { AccessManager } from './components/AccessManager.jsx';
 
 // Componente do diagrama
-import DiagramApp from './DiagramApp.jsx';
+import DiagramApp from './components/diagram/DiagramApp.jsx';
 
 // Hook para gerenciar autenticação
 import { AuthProvider, useAuth } from './hooks/useAuth.jsx';
