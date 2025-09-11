@@ -4,120 +4,74 @@ import {
   applyEdgeChanges,
   addEdge
 } from '@xyflow/react';
+import { 
+  listDiagrams, 
+  loadDiagram, 
+  saveDiagram, 
+  updateDiagram, 
+  deleteDiagram,
+  formatDiagramData 
+} from '../services/diagramApi.js';
 
 export const useDiagramStore = create((set, get) => ({
-  // State
-  nodes: [
-    {
-      id: 'sample-1',
-      type: 'c4Node',
-      position: { x: 250, y: 100 },
-      data: {
-        title: 'Web Application',
-        description: 'Entrypoint da aplicação web\nInterage com usuários\nHTML/React/TypeScript',
-        type: 'system',
-        width: 180,
-        height: 120
-      },
-      style: {
-        width: 180,
-        height: 120
-      }
-    },
-    {
-      id: 'sample-2', 
-      type: 'c4Node',
-      position: { x: 500, y: 100 },
-      data: {
-        title: 'API Gateway',
-        description: 'Gateway de entrada\nAutenticação e roteamento\nNode.js/Express',
-        type: 'container',
-        width: 180,
-        height: 120
-      },
-      style: {
-        width: 180,
-        height: 120
-      }
-    },
-    {
-      id: 'sample-3',
-      type: 'c4Node', 
-      position: { x: 750, y: 100 },
-      data: {
-        title: 'Database',
-        description: 'Armazenamento de dados\nPostgreSQL\nTabelas principais',
-        type: 'component',
-        width: 180,
-        height: 120
-      },
-      style: {
-        width: 180,
-        height: 120
-      }
-    }
-  ],
-  edges: [
-    {
-      id: 'e1-2',
-      source: 'sample-1',
-      target: 'sample-2',
-      sourceHandle: 'right',
-      targetHandle: 'left-target',
-      type: 'smoothstep',
-      animated: false,
-      style: { 
-        stroke: '#2196f3', 
-        strokeWidth: 3,
-        strokeDasharray: '5,5'
-      }
-    },
-    {
-      id: 'e2-3',
-      source: 'sample-2',
-      target: 'sample-3',
-      sourceHandle: 'bottom',
-      targetHandle: 'top-target',
-      type: 'smoothstep',
-      animated: false,
-      style: { 
-        stroke: '#2196f3', 
-        strokeWidth: 3,
-        strokeDasharray: '5,5'
-      }
-    }
-  ],
+  // State - Inicia vazio, sem diagramas de exemplo
+  nodes: [],
+  edges: [],
   selectedElements: [],
   isConnecting: false,
   connectionMode: false,
   currentTool: 'select',
   diagramName: 'Novo Diagrama C4',
   lastNodeCreation: 0, // Timestamp da última criação de nó
+  
+  // Persistência state
+  currentDiagramId: null,
+  isLoading: false,
+  isSaving: false,
+  lastSaved: null,
+  isDirty: false, // Se há mudanças não salvas
+  availableDiagrams: [],
+  autoSaveEnabled: true,
 
   // Actions
-  setNodes: (nodes) => set({ nodes }),
-  setEdges: (edges) => set({ edges }),
+  setNodes: (nodes) => set({ nodes, isDirty: true }),
+  setEdges: (edges) => set({ edges, isDirty: true }),
   
   onNodesChange: (changes) => {
     // Log das mudanças para debug
+    let hasMeaningfulChange = false;
     changes.forEach(change => {
       if (change.type === 'position' && change.position) {
         console.log(`📍 Nó ${change.id} movido para:`, change.position);
+        hasMeaningfulChange = true;
       } else if (change.type === 'select') {
         console.log(`🎯 Nó ${change.id} ${change.selected ? 'selecionado' : 'desselecionado'}`);
+        // Select/deselect não marca como dirty
       } else if (change.type === 'dimensions' && change.dimensions) {
         console.log(`📏 Nó ${change.id} redimensionado:`, change.dimensions);
+        hasMeaningfulChange = true;
+      } else if (change.type === 'add' || change.type === 'remove') {
+        hasMeaningfulChange = true;
       }
     });
 
     set({
-      nodes: applyNodeChanges(changes, get().nodes)
+      nodes: applyNodeChanges(changes, get().nodes),
+      isDirty: hasMeaningfulChange ? true : get().isDirty
     });
   },
   
   onEdgesChange: (changes) => {
+    let hasMeaningfulChange = false;
+    changes.forEach(change => {
+      if (change.type === 'add' || change.type === 'remove') {
+        hasMeaningfulChange = true;
+      }
+    });
+
     set({
-      edges: applyEdgeChanges(changes, get().edges)
+      edges: applyEdgeChanges(changes, get().edges),
+      isDirty: hasMeaningfulChange ? true : get().isDirty
     });
   },
   
@@ -181,7 +135,8 @@ export const useDiagramStore = create((set, get) => ({
     set({
       edges: updatedEdges,
       isConnecting: false,
-      connectionMode: false
+      connectionMode: false,
+      isDirty: true
     });
   },
   
@@ -243,7 +198,8 @@ export const useDiagramStore = create((set, get) => ({
     
     set({
       nodes: [...existingNodes, newNode],
-      lastNodeCreation: now
+      lastNodeCreation: now,
+      isDirty: true
     });
     
     return newNode;
@@ -342,7 +298,8 @@ export const useDiagramStore = create((set, get) => ({
     // Atualizar estado com novo nó e timestamp
     set({
       nodes: [...existingNodes, newNode],
-      lastNodeCreation: now // Salvar timestamp da última criação
+      lastNodeCreation: now, // Salvar timestamp da última criação
+      isDirty: true
     });
     
     return newNode; // Retorna o nó criado para confirmação
@@ -353,13 +310,15 @@ export const useDiagramStore = create((set, get) => ({
       nodes: get().nodes.filter(node => node.id !== nodeId),
       edges: get().edges.filter(edge => 
         edge.source !== nodeId && edge.target !== nodeId
-      )
+      ),
+      isDirty: true
     });
   },
   
   deleteEdge: (edgeId) => {
     set({
-      edges: get().edges.filter(edge => edge.id !== edgeId)
+      edges: get().edges.filter(edge => edge.id !== edgeId),
+      isDirty: true
     });
   },
   
@@ -384,7 +343,8 @@ export const useDiagramStore = create((set, get) => ({
         node.id === nodeId 
           ? { ...node, data: { ...node.data, ...data } }
           : node
-      )
+      ),
+      isDirty: true
     });
   },
 
@@ -463,7 +423,8 @@ export const useDiagramStore = create((set, get) => ({
       nodes: nodes || [], 
       edges: edges || [],
       selectedElements: [],
-      currentTool: 'select'
+      currentTool: 'select',
+      isDirty: false
     });
   },
 
@@ -477,7 +438,191 @@ export const useDiagramStore = create((set, get) => ({
       nodes: [],
       edges: [],
       selectedElements: [],
-      currentTool: 'select'
+      currentTool: 'select',
+      currentDiagramId: null,
+      isDirty: false,
+      diagramName: 'Novo Diagrama C4'
     });
+  },
+
+  // ====================================================
+  // AÇÕES DE PERSISTÊNCIA NO BANCO DE DADOS
+  // ====================================================
+
+  // Marcar como "sujo" (alterações não salvas)
+  markDirty: () => {
+    set({ isDirty: true });
+  },
+
+  // Carregar lista de diagramas disponíveis
+  loadAvailableDiagrams: async () => {
+    set({ isLoading: true });
+    try {
+      const result = await listDiagrams();
+      if (result.success) {
+        set({ 
+          availableDiagrams: result.diagrams,
+          isLoading: false 
+        });
+        return { success: true, diagrams: result.diagrams };
+      } else {
+        console.error('❌ Erro ao carregar lista de diagramas:', result.error);
+        set({ isLoading: false });
+        return { success: false, error: result.error };
+      }
+    } catch (error) {
+      console.error('❌ Erro ao carregar diagramas:', error);
+      set({ isLoading: false });
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Carregar diagrama específico do banco
+  loadDiagramFromDB: async (diagramId) => {
+    set({ isLoading: true });
+    try {
+      const result = await loadDiagram(diagramId);
+      if (result.success && result.diagram) {
+        const { data, name, id } = result.diagram;
+        set({
+          nodes: data.nodes || [],
+          edges: data.edges || [],
+          diagramName: name,
+          currentDiagramId: id,
+          isDirty: false,
+          lastSaved: new Date(),
+          isLoading: false,
+          selectedElements: []
+        });
+        console.log(`✅ Diagrama "${name}" carregado com sucesso`);
+        return { success: true, diagram: result.diagram };
+      } else {
+        console.error('❌ Erro ao carregar diagrama:', result.error);
+        set({ isLoading: false });
+        return { success: false, error: result.error };
+      }
+    } catch (error) {
+      console.error('❌ Erro ao carregar diagrama:', error);
+      set({ isLoading: false });
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Salvar diagrama atual (novo ou atualização)
+  saveDiagramToDB: async (name) => {
+    const state = get();
+    const { nodes, edges, currentDiagramId } = state;
+    
+    if (!name || !name.trim()) {
+      return { success: false, error: 'Nome do diagrama é obrigatório' };
+    }
+
+    set({ isSaving: true });
+    
+    try {
+      const diagramData = formatDiagramData(nodes, edges);
+      let result;
+
+      if (currentDiagramId) {
+        // Atualizar diagrama existente
+        result = await updateDiagram(currentDiagramId, name.trim(), diagramData);
+      } else {
+        // Criar novo diagrama
+        result = await saveDiagram(name.trim(), diagramData);
+      }
+
+      if (result.success) {
+        set({
+          diagramName: name.trim(),
+          currentDiagramId: result.diagramId || currentDiagramId,
+          isDirty: false,
+          lastSaved: new Date(),
+          isSaving: false
+        });
+        
+        // Recarregar lista de diagramas
+        get().loadAvailableDiagrams();
+        
+        console.log('✅ Diagrama salvo com sucesso');
+        return { success: true, message: result.message };
+      } else {
+        console.error('❌ Erro ao salvar diagrama:', result.error);
+        set({ isSaving: false });
+        return { success: false, error: result.error };
+      }
+    } catch (error) {
+      console.error('❌ Erro ao salvar diagrama:', error);
+      set({ isSaving: false });
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Auto-save (save silencioso)
+  autoSave: async () => {
+    const state = get();
+    const { autoSaveEnabled, isDirty, currentDiagramId, diagramName } = state;
+    
+    if (!autoSaveEnabled || !isDirty || !currentDiagramId) {
+      return;
+    }
+
+    console.log('🔄 Auto-save executando...');
+    const result = await get().saveDiagramToDB(diagramName);
+    
+    if (result.success) {
+      console.log('✅ Auto-save concluído');
+    } else {
+      console.error('❌ Erro no auto-save:', result.error);
+    }
+  },
+
+  // Excluir diagrama
+  deleteDiagramFromDB: async (diagramId) => {
+    set({ isLoading: true });
+    try {
+      const result = await deleteDiagram(diagramId);
+      if (result.success) {
+        // Se foi o diagrama atual, limpar
+        const { currentDiagramId } = get();
+        if (currentDiagramId === diagramId) {
+          get().clearDiagram();
+        }
+        
+        // Recarregar lista
+        await get().loadAvailableDiagrams();
+        
+        set({ isLoading: false });
+        console.log('✅ Diagrama excluído com sucesso');
+        return { success: true, message: result.message };
+      } else {
+        console.error('❌ Erro ao excluir diagrama:', result.error);
+        set({ isLoading: false });
+        return { success: false, error: result.error };
+      }
+    } catch (error) {
+      console.error('❌ Erro ao excluir diagrama:', error);
+      set({ isLoading: false });
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Criar novo diagrama (limpar atual)
+  createNewDiagram: () => {
+    set({
+      nodes: [],
+      edges: [],
+      selectedElements: [],
+      currentTool: 'select',
+      currentDiagramId: null,
+      isDirty: false,
+      diagramName: 'Novo Diagrama C4',
+      lastSaved: null
+    });
+    console.log('✅ Novo diagrama criado');
+  },
+
+  // Toggle auto-save
+  toggleAutoSave: () => {
+    set((state) => ({ autoSaveEnabled: !state.autoSaveEnabled }));
   }
 }));

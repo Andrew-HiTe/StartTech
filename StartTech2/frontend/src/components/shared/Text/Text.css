@@ -1,3 +1,7 @@
+.textmain {
+  padding-top: 77px; /* Altura do header fixo */
+}
+
 .texthome {
   display: flex;
   align-items: center;

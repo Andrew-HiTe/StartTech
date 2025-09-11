@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Modal } from './Modal.jsx';
-import { useDiagramManager } from '../stores/diagramManager.js';
+import { useDiagramManager, formatTimeAgo } from '../stores/diagramManager.js';
 import { useDiagramStore } from '../stores/diagramStore.js';
 
 // Importações de assets para Vite
@@ -9,6 +9,8 @@ import homelogo from '../assets/images/homelogo.png';
 import totvsSymbol from '../assets/totvs-symbol.svg';
 import diagramIcon from '../assets/diagram-icon.svg';
 import lupaIcon from '../assets/lupa-1.svg';
+import imageIcon from '../assets/image-9.svg';
+import usersIcon from '../assets/users-icon.svg';
 
 function Sidebar({ isMinimized, onToggle }) {
   const navigate = useNavigate();
@@ -21,6 +23,9 @@ function Sidebar({ isMinimized, onToggle }) {
     selectDiagram,
     setSearchTerm,
     getFilteredDiagrams,
+    addUserAccess,
+    removeUserAccess,
+    getCurrentDiagram,
     initializeDiagrams,
     isLoading,
     error
@@ -33,8 +38,10 @@ function Sidebar({ isMinimized, onToggle }) {
 
   // Local state for modals
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isAccessModalOpen, setIsAccessModalOpen] = useState(false);
   const [newDiagramName, setNewDiagramName] = useState('');
   const [newDiagramType, setNewDiagramType] = useState('c4');
+  const [newUserEmail, setNewUserEmail] = useState('');
 
   // Inicializar diagramas ao montar o componente
   useEffect(() => {
@@ -109,6 +116,7 @@ function Sidebar({ isMinimized, onToggle }) {
         {!isMinimized ? (
           <div className="flex items-center justify-between">
             <div className="flex flex-col items-center flex-1">
+              {/* Logo do Login */}
               <img 
                 src={homelogo}
                 alt="Logo" 
@@ -119,6 +127,7 @@ function Sidebar({ isMinimized, onToggle }) {
                 }}
               />
             </div>
+            {/* Botão X para fechar */}
             <button
               onClick={onToggle}
               className="text-white hover:bg-blue-600 p-1 rounded transition-colors"
@@ -131,11 +140,13 @@ function Sidebar({ isMinimized, onToggle }) {
           </div>
         ) : (
           <div className="flex flex-col items-center">
+            {/* Símbolo TOTVS quando minimizado */}
             <img 
               src={totvsSymbol} 
               alt="TOTVS Symbol" 
               className="w-8 h-8 mb-2 filter brightness-0 invert"
             />
+            {/* Botão menu hambúrguer quando minimizado */}
             <button
               onClick={onToggle}
               className="text-white hover:bg-blue-600 p-2 rounded transition-colors"
@@ -167,7 +178,7 @@ function Sidebar({ isMinimized, onToggle }) {
             </button>
           </div>
 
-          {/* Seção 2: Busca */}
+          {/* Seção 2: Busca e Navegação */}
           <div className="p-4 border-b border-blue-400/30">
             <div className="relative mb-4">
               <input
@@ -183,6 +194,27 @@ function Sidebar({ isMinimized, onToggle }) {
                 className="absolute left-2 top-2 w-6 h-6 filter brightness-0 invert"
               />
             </div>
+            
+            {/* Menu de navegação com ícones */}
+            <nav className="space-y-2">
+              <button className="w-full flex items-center gap-3 p-2 text-blue-100 hover:bg-blue-600 hover:bg-opacity-50 rounded transition-colors">
+                <img 
+                  src={diagramIcon} 
+                  alt="Diagramas" 
+                  className="w-6 h-6 filter brightness-0 invert"
+                />
+                <span className="text-sm">Meus Diagramas</span>
+              </button>
+              
+              <button className="w-full flex items-center gap-3 p-2 text-blue-100 hover:bg-blue-600 hover:bg-opacity-50 rounded transition-colors">
+                <img 
+                  src={imageIcon} 
+                  alt="Pessoas" 
+                  className="w-6 h-6 filter brightness-0 invert"
+                />
+                <span className="text-sm">Compartilhados</span>
+              </button>
+            </nav>
           </div>
 
           {/* Seção 3: Lista de Diagramas */}
@@ -203,26 +235,27 @@ function Sidebar({ isMinimized, onToggle }) {
               ) : getFilteredDiagrams().length === 0 ? (
                 <div className="text-blue-100 text-sm p-3 text-center opacity-75">
                   📝 Nenhum diagrama encontrado
+                  <br />
+                  <small>Crie seu primeiro diagrama!</small>
                 </div>
               ) : (
                 getFilteredDiagrams().map((diagram) => (
                   <button
                     key={diagram.id}
                     onClick={() => handleSelectDiagram(diagram.id)}
-                    className={`w-full p-3 rounded-lg text-left transition-colors mb-2 ${
-                      diagram.isActive 
-                        ? 'bg-blue-600 border border-blue-400' 
-                        : 'bg-blue-700 hover:bg-blue-600'
+                    className={`w-full text-left p-3 rounded mb-2 transition-colors ${
+                      currentDiagramId === diagram.id
+                        ? 'bg-blue-600 text-white'
+                        : 'text-blue-100 hover:bg-blue-600 hover:bg-opacity-50'
                     }`}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className={`w-2 h-2 rounded-full ${
+                        diagram.isActive ? 'bg-green-400' : 'bg-gray-400'
+                      }`}></span>
                       <div className="flex-1 min-w-0">
-                        <h4 className="text-white text-sm font-medium truncate">
-                          {diagram.name}
-                        </h4>
-                        <p className="text-blue-200 text-xs opacity-75">
-                          {diagram.lastModified ? new Date(diagram.lastModified).toLocaleDateString() : 'Novo'}
-                        </p>
+                        <p className="font-medium text-sm truncate">{diagram.name}</p>
+                        <p className="text-xs opacity-75">{formatTimeAgo(diagram.lastModified)}</p>
                         {diagram.version && (
                           <p className="text-xs opacity-50">v{diagram.version}</p>
                         )}
@@ -233,7 +266,35 @@ function Sidebar({ isMinimized, onToggle }) {
               )}
             </div>
           </div>
+
+          {/* Seção 4: Gerenciar Acessos */}
+          <div className="p-4 border-t border-blue-400/30">
+            <button 
+              onClick={() => setIsAccessModalOpen(true)}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded flex items-center gap-3 transition-colors"
+            >
+              <img 
+                src={usersIcon} 
+                alt="Usuários" 
+                className="w-5 h-5 filter brightness-0 invert"
+              />
+              <span className="font-medium">Gerenciar Acessos</span>
+            </button>
+          </div>
         </>
+      )}
+
+      {/* Conteúdo quando minimizado */}
+      {isMinimized && (
+        <div className="flex-1 flex flex-col items-center py-4 gap-4">
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="text-white hover:bg-blue-600 p-2 rounded transition-colors"
+            title="Criar Diagrama"
+          >
+            <span className="text-xl">📊</span>
+          </button>
+        </div>
       )}
 
       {/* Modal Criar Diagrama */}
@@ -284,6 +345,80 @@ function Sidebar({ isMinimized, onToggle }) {
               className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               Criar Diagrama
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal Gerenciar Acessos */}
+      <Modal
+        isOpen={isAccessModalOpen}
+        onClose={() => setIsAccessModalOpen(false)}
+        title="Gerenciar Acessos"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Adicionar Usuário
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="email"
+                value={newUserEmail}
+                onChange={(e) => setNewUserEmail(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newUserEmail.trim() && currentDiagramId) {
+                    addUserAccess(currentDiagramId, newUserEmail.trim());
+                    setNewUserEmail('');
+                  } else if (e.key === 'Escape') {
+                    setIsAccessModalOpen(false);
+                    setNewUserEmail('');
+                  }
+                }}
+                placeholder="email@exemplo.com"
+                className="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                autoFocus
+              />
+              <button 
+                onClick={() => {
+                  if (newUserEmail.trim() && currentDiagramId) {
+                    addUserAccess(currentDiagramId, newUserEmail.trim());
+                    setNewUserEmail('');
+                  }
+                }}
+                disabled={!newUserEmail.trim()}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                Adicionar
+              </button>
+            </div>
+          </div>
+          <div>
+            <h4 className="text-sm font-medium text-gray-700 mb-2">Usuários com Acesso</h4>
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {getCurrentDiagram()?.shareSettings.users.map((email, index) => (
+                <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                  <span className="text-sm text-gray-700">{email}</span>
+                  <button 
+                    onClick={() => {
+                      if (currentDiagramId) {
+                        removeUserAccess(currentDiagramId, email);
+                      }
+                    }}
+                    className="text-red-500 hover:text-red-700 text-sm"
+                  >
+                    Remover
+                  </button>
+                </div>
+              )) || []}
+            </div>
+          </div>
+          <div className="flex justify-end pt-4">
+            <button
+              onClick={() => setIsAccessModalOpen(false)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Fechar
             </button>
           </div>
         </div>

@@ -1,8 +1,8 @@
-// Toolbar component for diagram tools
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useDiagramStore } from '../stores/diagramStore.js';
 
 export const Toolbar = () => {
+  const [showLoadDialog, setShowLoadDialog] = useState(false);
   const { 
     currentTool, 
     setCurrentTool, 
@@ -11,10 +11,81 @@ export const Toolbar = () => {
     deleteEdge,
     nodes,
     edges,
-    exportDiagram
+    exportDiagram,
+    diagramName,
+    saveDiagramToDB,
+    loadDiagramFromDB,
+    isDirty,
+    autoSaveEnabled,
+    toggleAutoSave,
+    currentDiagramId,
+    createNewDiagram,
+    markDirty
   } = useDiagramStore();
 
+  // Estado para feedback visual do auto-save
+  const [saveStatus, setSaveStatus] = useState('saved'); // 'saved', 'saving', 'dirty'
+  const [autoSaveTimer, setAutoSaveTimer] = useState(null);
+
   console.log('🔧 Toolbar renderizado, currentTool:', currentTool);
+
+  // Auto-save implementation
+  const performAutoSave = useCallback(async () => {
+    if (!autoSaveEnabled || !isDirty || !currentDiagramId || !diagramName) {
+      return;
+    }
+
+    setSaveStatus('saving');
+    console.log('🔄 Auto-save iniciando...');
+    
+    try {
+      const result = await saveDiagramToDB(diagramName);
+      if (result.success) {
+        setSaveStatus('saved');
+        console.log('✅ Auto-save concluído');
+      } else {
+        setSaveStatus('dirty');
+        console.error('❌ Erro no auto-save:', result.error);
+      }
+    } catch (error) {
+      setSaveStatus('dirty');
+      console.error('❌ Erro no auto-save:', error);
+    }
+  }, [autoSaveEnabled, isDirty, currentDiagramId, diagramName, saveDiagramToDB]);
+
+  // Configurar auto-save com debounce
+  useEffect(() => {
+    if (isDirty && autoSaveEnabled) {
+      setSaveStatus('dirty');
+      
+      // Limpar timer anterior
+      if (autoSaveTimer) {
+        clearTimeout(autoSaveTimer);
+      }
+      
+      // Configurar novo timer para auto-save após 3 segundos
+      const timer = setTimeout(() => {
+        performAutoSave();
+      }, 3000);
+      
+      setAutoSaveTimer(timer);
+    }
+
+    return () => {
+      if (autoSaveTimer) {
+        clearTimeout(autoSaveTimer);
+      }
+    };
+  }, [isDirty, autoSaveEnabled, performAutoSave]);
+
+  // Limpar timer quando componente desmonta
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimer) {
+        clearTimeout(autoSaveTimer);
+      }
+    };
+  }, []);
 
   const handleDelete = () => {
     selectedElements.forEach(elementId => {
@@ -28,6 +99,36 @@ export const Toolbar = () => {
         deleteEdge(elementId);
       }
     });
+    
+    // Marcar como dirty após deletar elementos
+    markDirty();
+  };
+
+  const handleManualSave = async () => {
+    if (!currentDiagramId || !diagramName) {
+      console.log('❌ Não é possível salvar: diagrama não inicializado');
+      return;
+    }
+
+    setSaveStatus('saving');
+    try {
+      const result = await saveDiagramToDB(diagramName);
+      if (result.success) {
+        setSaveStatus('saved');
+        console.log('✅ Salvamento manual concluído');
+      } else {
+        setSaveStatus('dirty');
+        console.error('❌ Erro no salvamento manual:', result.error);
+      }
+    } catch (error) {
+      setSaveStatus('dirty');
+      console.error('❌ Erro no salvamento manual:', error);
+    }
+  };
+
+  const handleNewDiagram = () => {
+    createNewDiagram();
+    setSaveStatus('saved');
   };
 
   const toolButtons = [
@@ -44,87 +145,145 @@ export const Toolbar = () => {
       icon: '📊',
       active: currentTool === 'add-table',
       description: 'Clique ou arraste no canvas para adicionar nova tabela'
+    },
+    {
+      id: 'add-system',
+      label: 'Adicionar Sistema',
+      icon: '🖥️',
+      active: currentTool === 'add-system',
+      description: 'Clique ou arraste no canvas para adicionar novo sistema'
     }
   ];
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-lg px-4 py-2 flex items-center gap-3">
-      {/* Tool buttons */}
-      <div className="flex items-center gap-2">
-        {toolButtons.map((tool) => (
+    <div className="toolbar bg-white border-b border-gray-300 p-2 flex items-center justify-between shadow-sm">
+      <div className="flex items-center space-x-2">
+        {toolButtons.map(tool => (
           <button
             key={tool.id}
-            onClick={(e) => {
-              console.log('🔧 BOTÃO CLICADO!', tool.id, e);
-              console.log('🔧 Clicando em ferramenta:', tool.id);
-              setCurrentTool(tool.id);
-            }}
-            onMouseDown={(e) => {
-              console.log('🔧 MOUSE DOWN no botão:', tool.id);
-            }}
-            title={tool.description}
-            className={`px-3 py-2 rounded-md border text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
-              tool.active
-                ? 'bg-blue-500 text-white border-blue-500 shadow-md'
-                : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:border-blue-300'
+            className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150 ${
+              tool.active 
+                ? 'bg-blue-600 text-white shadow-md' 
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
+            onClick={() => setCurrentTool(tool.id)}
+            title={tool.description}
           >
-            <span>{tool.icon}</span>
-            <span>{tool.label}</span>
+            <span className="mr-1">{tool.icon}</span>
+            {tool.label}
           </button>
         ))}
-      </div>
-
-      {/* Instruções dinâmicas */}
-      <div className="ml-4 px-3 py-1 bg-blue-50 text-blue-700 text-sm rounded-md border border-blue-200">
-        {currentTool === 'select' ? (
-          <span>💡 Clique em nós para selecioná-los, arraste handles azuis para conectar</span>
-        ) : currentTool === 'add-table' ? (
-          <span>💡 Clique ou arraste no canvas para criar nova tabela</span>
-        ) : (
-          <span>💡 Selecione uma ferramenta</span>
+        
+        {selectedElements.length > 0 && (
+          <button
+            className="px-3 py-2 rounded-md text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors duration-150"
+            onClick={handleDelete}
+            title="Excluir elementos selecionados"
+          >
+            <span className="mr-1">🗑️</span>
+            Excluir ({selectedElements.length})
+          </button>
         )}
       </div>
 
-      {/* Separator */}
-      <div className="w-px h-6 bg-gray-300" />
+      <div className="flex items-center space-x-2">
+        {/* Auto-save toggle */}
+        <label className="flex items-center space-x-2 text-sm text-gray-600">
+          <input
+            type="checkbox"
+            checked={autoSaveEnabled}
+            onChange={toggleAutoSave}
+            className="rounded"
+          />
+          <span>Auto-salvar</span>
+        </label>
 
-      {/* Action buttons */}
-      <div className="flex items-center gap-2">
+        {/* Save status indicator */}
+        <div className="flex items-center space-x-1">
+          {saveStatus === 'saving' && (
+            <div className="flex items-center space-x-1 text-blue-600">
+              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+              <span className="text-xs">Salvando...</span>
+            </div>
+          )}
+          {saveStatus === 'dirty' && autoSaveEnabled && (
+            <span className="text-xs text-orange-600 font-medium">
+              • Alterações detectadas
+            </span>
+          )}
+          {saveStatus === 'dirty' && !autoSaveEnabled && (
+            <span className="text-xs text-red-600 font-medium">
+              • Não salvo
+            </span>
+          )}
+          {saveStatus === 'saved' && (
+            <span className="text-xs text-green-600 font-medium">
+              ✓ Salvo
+            </span>
+          )}
+        </div>
+
+        {/* Current diagram name */}
+        {diagramName && (
+          <span className="text-sm text-gray-600 font-medium max-w-32 truncate">
+            {diagramName}
+          </span>
+        )}
+
+        {/* Manual save button (only when auto-save is off) */}
+        {!autoSaveEnabled && (
+          <button
+            onClick={handleManualSave}
+            disabled={!isDirty || saveStatus === 'saving'}
+            className="px-3 py-1.5 rounded-md text-sm font-medium bg-green-100 text-green-700 hover:bg-green-200 transition-colors disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+          >
+            💾 Salvar
+          </button>
+        )}
+
+        {/* New diagram button */}
         <button
-          onClick={handleDelete}
-          disabled={selectedElements.length === 0}
-          className={`px-3 py-2 rounded-md border text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
-            selectedElements.length > 0
-              ? 'bg-red-500 text-white border-red-500 hover:bg-red-600'
-              : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-          }`}
+          onClick={handleNewDiagram}
+          className="px-3 py-1.5 rounded-md text-sm font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
         >
-          <span>🗑️</span>
-          <span>Excluir</span>
+          � Novo
+        </button>
+
+        {/* Load button */}
+        <button
+          className="px-3 py-1.5 rounded-md text-sm font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
+          onClick={() => setShowLoadDialog(true)}
+        >
+          📂 Carregar
         </button>
 
         <button
+          className="px-3 py-1.5 rounded-md text-sm font-medium bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors"
           onClick={exportDiagram}
-          className="px-3 py-2 rounded-md border bg-green-500 text-white border-green-500 hover:bg-green-600 text-sm font-medium transition-all duration-200 flex items-center gap-2"
         >
-          <span>💾</span>
-          <span>Exportar</span>
+          📤 Exportar
         </button>
       </div>
 
-      {/* Status info - Compacto */}
-      <div className="ml-4 flex items-center gap-4 text-sm text-gray-600">
-        <span className="font-medium">
-          {selectedElements.length > 0 
-            ? `${selectedElements.length} selecionado(s)`
-            : 'Nenhum selecionado'
-          }
-        </span>
-        <span className="text-xs bg-gray-100 px-2 py-1 rounded">
-          {nodes.length} tabelas • {edges.length} conexões
-        </span>
-      </div>
+      {/* Load Dialog */}
+      {showLoadDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96 max-w-[90vw]">
+            <h3 className="text-lg font-semibold mb-4">Carregar Diagrama</h3>
+            <p className="text-gray-600 mb-4">
+              Use a barra lateral à esquerda para selecionar um diagrama.
+            </p>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowLoadDialog(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

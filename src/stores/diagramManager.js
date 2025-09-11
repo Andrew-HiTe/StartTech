@@ -1,115 +1,171 @@
 import { create } from 'zustand';
-
-const generateId = () => `diagram_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+import { listDiagrams, loadDiagram, saveDiagram, deleteDiagram } from '../services/diagramApi.js';
 
 export const useDiagramManager = create((set, get) => ({
-  // Initial state with mock data
-  diagrams: [
-    {
-      id: 'diagram_1',
-      name: 'Sistema Principal',
-      type: 'c4',
-      createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-      lastModified: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-      isActive: true,
-      nodes: [],
-      edges: [],
-      shareSettings: {
-        users: ['admin@totvs.com', 'joao@empresa.com', 'maria@empresa.com'],
-        roles: { 
-          'admin@totvs.com': 'owner',
-          'joao@empresa.com': 'editor',
-          'maria@empresa.com': 'viewer'
-        },
-        isPublic: false
-      }
-    },
-    {
-      id: 'diagram_2',
-      name: 'Módulo Financeiro',
-      type: 'flowchart',
-      createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
-      lastModified: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-      isActive: false,
-      nodes: [],
-      edges: [],
-      shareSettings: {
-        users: ['admin@totvs.com', 'pedro@empresa.com'],
-        roles: { 
-          'admin@totvs.com': 'owner',
-          'pedro@empresa.com': 'editor'
-        },
-        isPublic: false
-      }
-    },
-    {
-      id: 'diagram_3',
-      name: 'Dashboard Analytics',
-      type: 'uml',
-      createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 1 week ago
-      lastModified: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-      isActive: false,
-      nodes: [],
-      edges: [],
-      shareSettings: {
-        users: ['admin@totvs.com', 'user2@totvs.com'],
-        isPublic: true
-      }
-    }
-  ],
-  currentDiagramId: 'diagram_1',
+  // State - Inicia vazio, vai buscar do banco
+  diagrams: [],
+  currentDiagramId: null,
   searchTerm: '',
+  isLoading: false,
+  error: null,
 
   // Actions
-  createDiagram: (name, type) => {
-    const newId = generateId();
-    const newDiagram = {
-      id: newId,
-      name,
-      type,
-      createdAt: new Date(),
-      lastModified: new Date(),
-      isActive: true,
-      nodes: [],
-      edges: [],
-      shareSettings: {
-        users: ['admin@totvs.com'], // Current user
-        roles: { 'admin@totvs.com': 'owner' }, // Roles: owner, editor, viewer
-        isPublic: false
-      }
-    };
-
-    set((state) => ({
-      diagrams: [newDiagram, ...state.diagrams.map(d => ({ ...d, isActive: false }))],
-      currentDiagramId: newId
-    }));
-
-    return newId;
-  },
-
-  deleteDiagram: (id) => {
-    set((state) => {
-      const filtered = state.diagrams.filter(d => d.id !== id);
-      const newCurrentId = state.currentDiagramId === id 
-        ? (filtered.length > 0 ? filtered[0].id : null)
-        : state.currentDiagramId;
+  initializeDiagrams: async () => {
+    console.log('🚀 [DiagramManager] Iniciando carregamento de diagramas...');
+    set({ isLoading: true, error: null });
+    try {
+      const result = await listDiagrams();
+      console.log('📦 [DiagramManager] Resposta da API:', result);
       
-      return {
-        diagrams: filtered,
-        currentDiagramId: newCurrentId
-      };
-    });
+      if (result.success) {
+        // Transformar dados do banco para o formato esperado
+        const formattedDiagrams = result.diagrams.map(diagram => ({
+          id: diagram.id ? diagram.id.toString() : 'unknown',
+          name: diagram.name,
+          type: 'c4', // Tipo padrão
+          createdAt: new Date(diagram.created_at),
+          lastModified: new Date(diagram.updated_at),
+          isActive: true, // Só diagrams ativos vêm do banco
+          nodes: [],
+          edges: [],
+          shareSettings: {
+            users: ['admin@totvs.com'],
+            roles: { 'admin@totvs.com': 'owner' },
+            isPublic: false
+          },
+          version: diagram.version || 1
+        }));
+
+        set({ 
+          diagrams: formattedDiagrams,
+          isLoading: false,
+          currentDiagramId: formattedDiagrams.length > 0 ? formattedDiagrams[0].id : null
+        });
+        
+        console.log(`✅ [DiagramManager] ${formattedDiagrams.length} diagramas carregados do banco:`, formattedDiagrams.map(d => `${d.id}: ${d.name}`));
+        return { success: true, diagrams: formattedDiagrams };
+      } else {
+        set({ isLoading: false, error: result.error });
+        console.error('❌ [DiagramManager] Erro ao carregar diagramas:', result.error);
+        return { success: false, error: result.error };
+      }
+    } catch (error) {
+      set({ isLoading: false, error: error.message });
+      console.error('❌ [DiagramManager] Erro ao inicializar diagramas:', error);
+      return { success: false, error: error.message };
+    }
+  },
+  createDiagram: async (name, type) => {
+    try {
+      // Criar diagrama vazio no banco
+      const result = await saveDiagram(name, { nodes: [], edges: [] });
+      
+      if (result.success && result.diagramId) {
+        const newDiagram = {
+          id: result.diagramId ? result.diagramId.toString() : 'temp-' + Date.now(),
+          name,
+          type: type || 'c4',
+          createdAt: new Date(),
+          lastModified: new Date(),
+          isActive: true,
+          nodes: [],
+          edges: [],
+          shareSettings: {
+            users: ['admin@totvs.com'],
+            roles: { 'admin@totvs.com': 'owner' },
+            isPublic: false
+          },
+          version: 1
+        };
+
+        set((state) => ({
+          diagrams: [newDiagram, ...state.diagrams.map(d => ({ ...d, isActive: false }))],
+          currentDiagramId: newDiagram.id
+        }));
+
+        console.log(`✅ Diagrama "${name}" criado com ID: ${result.diagramId}`);
+        return { success: true, diagramId: result.diagramId };
+      } else {
+        const error = result.error || 'ID do diagrama não retornado pelo servidor';
+        console.error('❌ Erro ao criar diagrama:', error);
+        return { success: false, error };
+      }
+    } catch (error) {
+      console.error('❌ Erro ao criar diagrama:', error);
+      return { success: false, error: error.message };
+    }
   },
 
-  selectDiagram: (id) => {
-    set((state) => ({
-      diagrams: state.diagrams.map(d => ({ 
-        ...d, 
-        isActive: d.id === id,
-        lastModified: d.id === id ? new Date() : d.lastModified
-      })),
-      currentDiagramId: id
-    }));
+  deleteDiagram: async (id) => {
+    try {
+      const result = await deleteDiagram(parseInt(id));
+      
+      if (result.success) {
+        set((state) => {
+          const filtered = state.diagrams.filter(d => d.id !== id);
+          const newCurrentId = state.currentDiagramId === id 
+            ? (filtered.length > 0 ? filtered[0].id : null)
+            : state.currentDiagramId;
+          
+          return {
+            diagrams: filtered,
+            currentDiagramId: newCurrentId
+          };
+        });
+        
+        console.log(`✅ Diagrama ID ${id} excluído com sucesso`);
+        return { success: true };
+      } else {
+        console.error('❌ Erro ao excluir diagrama:', result.error);
+        return { success: false, error: result.error };
+      }
+    } catch (error) {
+      console.error('❌ Erro ao excluir diagrama:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  selectDiagram: async (id) => {
+    try {
+      // Carregar dados do diagrama do banco
+      const result = await loadDiagram(parseInt(id));
+      
+      if (result.success) {
+        // Atualizar estado local
+        set((state) => ({
+          diagrams: state.diagrams.map(d => ({ 
+            ...d, 
+            isActive: d.id === id,
+            // Atualizar dados se necessário
+            ...(d.id === id && result.diagram ? {
+              nodes: result.diagram.data?.nodes || [],
+              edges: result.diagram.data?.edges || [],
+              lastModified: new Date(result.diagram.updated_at)
+            } : {})
+          })),
+          currentDiagramId: id
+        }));
+
+        console.log(`✅ Diagrama "${result.diagram.name}" selecionado`);
+        return { success: true, diagram: result.diagram };
+      } else {
+        console.error('❌ Erro ao selecionar diagrama:', result.error);
+        // Fallback para seleção local
+        set((state) => ({
+          diagrams: state.diagrams.map(d => ({ ...d, isActive: d.id === id })),
+          currentDiagramId: id
+        }));
+        return { success: false, error: result.error };
+      }
+    } catch (error) {
+      console.error('❌ Erro ao selecionar diagrama:', error);
+      // Fallback para seleção local
+      set((state) => ({
+        diagrams: state.diagrams.map(d => ({ ...d, isActive: d.id === id })),
+        currentDiagramId: id
+      }));
+      return { success: false, error: error.message };
+    }
   },
 
   updateDiagramName: (id, name) => {
@@ -128,11 +184,19 @@ export const useDiagramManager = create((set, get) => ({
 
   getFilteredDiagrams: () => {
     const { diagrams, searchTerm } = get();
-    if (!searchTerm) return diagrams;
+    console.log('🔍 [DiagramManager] getFilteredDiagrams chamado - Total diagramas:', diagrams.length, 'Busca:', searchTerm);
     
-    return diagrams.filter(diagram =>
+    if (!searchTerm) {
+      console.log('📋 [DiagramManager] Retornando todos os diagramas:', diagrams.length);
+      return diagrams;
+    }
+    
+    const filtered = diagrams.filter(diagram =>
       diagram.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
+    
+    console.log('📋 [DiagramManager] Diagramas filtrados:', filtered.length);
+    return filtered;
   },
 
   addUserAccess: (diagramId, userEmail, role = 'editor') => {

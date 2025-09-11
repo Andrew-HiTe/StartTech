@@ -1,7 +1,8 @@
 /* Lista de funcionalidades do T-Draw */
 .funcionalidades-section {
-  padding: 60px 20px;
+  padding: 80px 20px 100px 20px; /* Aumentar padding para mais altura */
   background-color: #f8f9fa;
+  min-height: 80vh; /* Garantir altura mínima */
 }
 
 .funcionalidades-section h2 {
