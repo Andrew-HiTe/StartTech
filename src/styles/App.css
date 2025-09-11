@@ -6,13 +6,15 @@
   padding: 0;
 }
 
-/* CSS para o diagrama - mantém layout original do projetobase */
+/* CSS para o diagrama - layout otimizado sem rolagem */
 .diagram-app {
   width: 100vw;
   height: 100vh;
   margin: 0;
   padding: 0;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* CSS original do projetobase */
@@ -20,6 +22,30 @@
   margin: 0;
   padding: 0;
   min-height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+}
+
+/* Cursors personalizados para o diagrama */
+.cursor-add-table {
+  cursor: crosshair !important;
+}
+
+.middle-mouse-dragging {
+  cursor: grabbing !important;
+}
+
+.cursor-default {
+  cursor: default;
+}
+
+/* Preview da criação de tabela */
+.table-creation-preview {
+  border: 2px dashed #3b82f6;
+  background-color: rgba(59, 130, 246, 0.1);
+  border-radius: 8px;
+  pointer-events: none;
+  z-index: 1000;
 }
 
 .logo {

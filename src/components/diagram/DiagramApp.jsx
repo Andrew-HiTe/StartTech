@@ -63,6 +63,14 @@ function DiagramFlow({ isSidebarMinimized, setIsSidebarMinimized }) {
   // Debug: mostrar currentTool
   console.log('🔧 Current tool:', currentTool);
 
+  // Função integrada para atualizar nome do diagrama
+  const handleDiagramNameChange = useCallback((name) => {
+    setDiagramName(name);
+    if (currentDiagramId) {
+      updateDiagramName(currentDiagramId, name);
+    }
+  }, [setDiagramName, currentDiagramId, updateDiagramName]);
+
   const proOptions = { hideAttribution: true };
 
   // Handler para start de conexão
@@ -447,32 +455,25 @@ function DiagramFlow({ isSidebarMinimized, setIsSidebarMinimized }) {
   }, [nodes, previewNode]);
 
   return (
-    <div className="w-full h-screen flex flex-col bg-gray-50">
-      {/* Header */}
-      <Header 
-        projectName="StartTech" 
-        diagramName={diagramName}
-        onDiagramNameChange={setDiagramName}
+    <div className="w-full h-screen flex">
+      {/* Sidebar */}
+      <Sidebar 
+        isMinimized={isSidebarMinimized}
+        onToggle={() => setIsSidebarMinimized(!isSidebarMinimized)}
       />
       
-      {/* Main Content */}
-      <div className="flex-1 flex">
-        {/* Sidebar */}
-        <Sidebar 
-          isMinimized={isSidebarMinimized}
-          onToggle={() => setIsSidebarMinimized(!isSidebarMinimized)}
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <Header 
+          projectName="T-Draw" 
+          diagramName={getCurrentDiagram()?.name || diagramName}
+          onDiagramNameChange={handleDiagramNameChange}
         />
         
         {/* Diagram Area */}
-        <div className="flex-1 flex flex-col">
-          {/* Toolbar */}
-          <div className="p-4">
-            <Toolbar />
-          </div>
-          
-          {/* ReactFlow */}
-          <div className="flex-1 relative">
-            <ReactFlow
+        <div className="flex-1 relative w-full h-full">
+          <ReactFlow
               nodes={allNodes}
               edges={edges}
               nodeTypes={nodeTypes}
@@ -527,56 +528,47 @@ function DiagramFlow({ isSidebarMinimized, setIsSidebarMinimized }) {
               proOptions={proOptions}
               className={
                 currentTool === 'add-table' 
-                  ? 'cursor-crosshair' 
+                  ? 'cursor-add-table' 
                   : isDraggingWithMiddleMouse 
-                    ? 'cursor-grabbing'
+                    ? 'middle-mouse-dragging'
                     : 'cursor-default'
               }
             >
-              <Background color="#E5E7EB" size={2} />
-              
-              <Controls 
-                position="bottom-left"
-                showZoom={true}
-                showFitView={true}
-                showInteractive={false}
-              />
-              
+              <Background />
+              <Controls />
               <MiniMap 
-                position="bottom-right"
-                pannable={true}
-                zoomable={true}
                 nodeColor={(node) => {
                   switch (node.data?.type) {
-                    case 'person': return '#10B981';
-                    case 'system': return '#3B82F6';
-                    case 'container': return '#8B5CF6';
-                    case 'component': return '#F59E0B';
-                    default: return '#6B7280';
+                    case 'person': return '#10b981';
+                    case 'system': return '#3b82f6';
+                    case 'container': return '#8b5cf6';
+                    case 'component': return '#f59e0b';
+                    default: return '#6b7280';
                   }
                 }}
-                style={{
-                  backgroundColor: 'white',
-                  border: '2px solid #E5E7EB',
-                  borderRadius: '8px',
-                }}
+                className="bg-white border border-gray-300 rounded-lg"
               />
               
-              <Panel position="top-right">
-                <div className="bg-white/80 backdrop-blur-sm px-3 py-2 rounded-lg shadow-sm border border-gray-200">
-                  <div className="text-sm text-gray-600">
-                    {currentTool === 'add-table' ? (
-                      <span className="text-blue-600 font-medium">
-                        📊 Clique para criar tabela
-                      </span>
-                    ) : (
-                      <span>🖱️ Modo seleção</span>
-                    )}
+              <Panel position="bottom-center">
+                <Toolbar />
+              </Panel>
+
+              <Panel position="top-right" className="bg-white p-4 rounded-lg shadow-lg border">
+                <div className="text-sm space-y-2">
+                  <h3 className="font-semibold text-gray-800 mb-2">Como Usar:</h3>
+                  <div className="space-y-1 text-xs text-gray-600">
+                    <div><strong>Mover:</strong> Arraste a tabela</div>
+                    <div><strong>Conectar:</strong> Arraste pelos pontos azuis nas bordas</div>
+                    <div><strong>Editar:</strong> Duplo clique no texto</div>
+                    <div><strong>Adicionar:</strong> Clique no canvas (modo adicionar)</div>
+                    <div><strong>Excluir:</strong> Selecione + botão excluir</div>
+                  </div>
+                  <div className="text-xs mt-2 pt-2 border-t">
+                    <div>{nodes.length} tabela(s) • {edges.length} conexão(ões)</div>
                   </div>
                 </div>
               </Panel>
             </ReactFlow>
-          </div>
         </div>
       </div>
       
