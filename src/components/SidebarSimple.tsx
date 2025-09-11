@@ -3,7 +3,7 @@ import { Modal } from './Modal';
 import { useDiagramManager, formatTimeAgo, type Diagram } from '../stores/diagramManager';
 
 // Importações de assets para Vite
-import totvsLogo from '../assets/logo-totvs-azul-escuro.svg';
+import homelogo from '../assets/images/homelogo.png';
 import totvsSymbol from '../assets/totvs-symbol.svg';
 import diagramIcon from '../assets/diagram-icon.svg';
 import lupaIcon from '../assets/lupa-1.svg';
@@ -48,19 +48,16 @@ function Sidebar({ isMinimized, onToggle }: SidebarProps) {
         {!isMinimized ? (
           <div className="flex items-center justify-between">
             <div className="flex flex-col items-center flex-1">
-              {/* Logo TOTVS */}
+              {/* Logo do Login */}
               <img 
-                src={totvsLogo}
-                alt="TOTVS Logo" 
-                className="w-30 h-26 mb-2 filter brightness-0 invert"
+                src={homelogo}
+                alt="Logo" 
+                className="w-16 h-16 mb-2"
                 onError={(e) => {
                   e.currentTarget.src = "/src/assets/logo-totvs-fallback.png";
-                  e.currentTarget.className = "w-18 h-16 mb-2";
+                  e.currentTarget.className = "w-14 h-14 mb-2";
                 }}
               />
-              <h1 className="text-white font-extrabold text-xl" style={{ fontFamily: 'Nunito Sans, sans-serif' }}>
-                T-Draw
-              </h1>
             </div>
             {/* Botão X para fechar */}
             <button

@@ -4,10 +4,10 @@
 -- ====================================================
 
 -- 1. Criar o banco de dados (descomente se necessário)
--- CREATE DATABASE DB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+-- CREATE DATABASE starttech_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- 2. Usar o banco de dados
-USE DB;
+USE starttech_db;
 
 -- ====================================================
 -- TABELA DE USUÁRIOS
@@ -39,10 +39,8 @@ CREATE TABLE projects (
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
     -- Chaves estrangeiras
     FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
-    
     -- Índices
     INDEX idx_owner (owner_id),
     INDEX idx_active (is_active)
@@ -61,11 +59,9 @@ CREATE TABLE diagrams (
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
     -- Chaves estrangeiras
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL,
-    
     -- Índices
     INDEX idx_user (user_id),
     INDEX idx_project (project_id),
@@ -84,12 +80,10 @@ CREATE TABLE project_permissions (
     granted_by INT NOT NULL,
     granted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     is_active BOOLEAN DEFAULT TRUE,
-    
     -- Chaves estrangeiras
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
     FOREIGN KEY (granted_by) REFERENCES users(id) ON DELETE RESTRICT,
-    
     -- Índices e constraints
     UNIQUE KEY unique_user_project (user_id, project_id),
     INDEX idx_project (project_id),
@@ -116,13 +110,11 @@ CREATE TABLE diagram_tables (
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
     -- Chaves estrangeiras
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
     FOREIGN KEY (diagram_id) REFERENCES diagrams(id) ON DELETE SET NULL,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT,
     FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL,
-    
     -- Índices
     INDEX idx_project (project_id),
     INDEX idx_diagram (diagram_id),
@@ -147,14 +139,12 @@ CREATE TABLE table_connections (
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
     -- Chaves estrangeiras
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
     FOREIGN KEY (source_table_id) REFERENCES diagram_tables(id) ON DELETE CASCADE,
     FOREIGN KEY (target_table_id) REFERENCES diagram_tables(id) ON DELETE CASCADE,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT,
     FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL,
-    
     -- Índices
     INDEX idx_project (project_id),
     INDEX idx_source (source_table_id),
@@ -177,11 +167,9 @@ CREATE TABLE audit_log (
     ip_address VARCHAR(45) NULL,
     user_agent TEXT NULL,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
     -- Chaves estrangeiras
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT,
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL,
-    
     -- Índices
     INDEX idx_user (user_id),
     INDEX idx_project (project_id),
