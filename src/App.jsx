@@ -11,7 +11,7 @@ import './styles/App.css';
 // Importar páginas
 import { Home } from './components/home/Home.jsx';
 import { LoginForm } from './components/auth/LoginForm.jsx';
-import { AccessManager } from './components/AccessManager.jsx';
+import AccessManager from './components/AccessManager.jsx';
 
 // Componente do diagrama
 import DiagramApp from './components/diagram/DiagramApp.jsx';

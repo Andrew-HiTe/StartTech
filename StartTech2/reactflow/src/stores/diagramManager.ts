@@ -1,8 +1,54 @@
 import { create } from 'zustand';
+import type { Edge } from '@xyflow/react';
+import type { C4Node } from './diagramStore';
+
+export interface Diagram {
+  id: string;
+  name: string;
+  type: 'c4' | 'flowchart' | 'uml';
+  createdAt: Date;
+  lastModified: Date;
+  isActive: boolean;
+  nodes: C4Node[];
+  edges: Edge[];
+  shareSettings: {
+    users: string[];
+    isPublic: boolean;
+  };
+}
+
+interface DiagramManagerState {
+  diagrams: Diagram[];
+  currentDiagramId: string | null;
+  searchTerm: string;
+}
+
+interface DiagramManagerActions {
+  // Diagram CRUD
+  createDiagram: (name: string, type: Diagram['type']) => string;
+  deleteDiagram: (id: string) => void;
+  selectDiagram: (id: string) => void;
+  updateDiagramName: (id: string, name: string) => void;
+  
+  // Search
+  setSearchTerm: (term: string) => void;
+  getFilteredDiagrams: () => Diagram[];
+  
+  // Access Management
+  addUserAccess: (diagramId: string, userEmail: string) => void;
+  removeUserAccess: (diagramId: string, userEmail: string) => void;
+  
+  // Diagram Data Management
+  saveDiagramData: (diagramId: string, nodes: C4Node[], edges: Edge[]) => void;
+  
+  // Utils
+  getCurrentDiagram: () => Diagram | null;
+  updateDiagramActivity: (id: string) => void;
+}
 
 const generateId = () => `diagram_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-export const useDiagramManager = create((set, get) => ({
+export const useDiagramManager = create<DiagramManagerState & DiagramManagerActions>((set, get) => ({
   // Initial state with mock data
   diagrams: [
     {
@@ -15,12 +61,7 @@ export const useDiagramManager = create((set, get) => ({
       nodes: [],
       edges: [],
       shareSettings: {
-        users: ['admin@totvs.com', 'joao@empresa.com', 'maria@empresa.com'],
-        roles: { 
-          'admin@totvs.com': 'owner',
-          'joao@empresa.com': 'editor',
-          'maria@empresa.com': 'viewer'
-        },
+        users: ['admin@totvs.com', 'user1@totvs.com'],
         isPublic: false
       }
     },
@@ -34,11 +75,7 @@ export const useDiagramManager = create((set, get) => ({
       nodes: [],
       edges: [],
       shareSettings: {
-        users: ['admin@totvs.com', 'pedro@empresa.com'],
-        roles: { 
-          'admin@totvs.com': 'owner',
-          'pedro@empresa.com': 'editor'
-        },
+        users: ['admin@totvs.com'],
         isPublic: false
       }
     },
@@ -61,9 +98,9 @@ export const useDiagramManager = create((set, get) => ({
   searchTerm: '',
 
   // Actions
-  createDiagram: (name, type) => {
+  createDiagram: (name: string, type: Diagram['type']) => {
     const newId = generateId();
-    const newDiagram = {
+    const newDiagram: Diagram = {
       id: newId,
       name,
       type,
@@ -74,7 +111,6 @@ export const useDiagramManager = create((set, get) => ({
       edges: [],
       shareSettings: {
         users: ['admin@totvs.com'], // Current user
-        roles: { 'admin@totvs.com': 'owner' }, // Roles: owner, editor, viewer
         isPublic: false
       }
     };
@@ -87,7 +123,7 @@ export const useDiagramManager = create((set, get) => ({
     return newId;
   },
 
-  deleteDiagram: (id) => {
+  deleteDiagram: (id: string) => {
     set((state) => {
       const filtered = state.diagrams.filter(d => d.id !== id);
       const newCurrentId = state.currentDiagramId === id 
@@ -101,7 +137,7 @@ export const useDiagramManager = create((set, get) => ({
     });
   },
 
-  selectDiagram: (id) => {
+  selectDiagram: (id: string) => {
     set((state) => ({
       diagrams: state.diagrams.map(d => ({ 
         ...d, 
@@ -112,7 +148,7 @@ export const useDiagramManager = create((set, get) => ({
     }));
   },
 
-  updateDiagramName: (id, name) => {
+  updateDiagramName: (id: string, name: string) => {
     set((state) => ({
       diagrams: state.diagrams.map(d => 
         d.id === id 
@@ -122,7 +158,7 @@ export const useDiagramManager = create((set, get) => ({
     }));
   },
 
-  setSearchTerm: (term) => {
+  setSearchTerm: (term: string) => {
     set({ searchTerm: term });
   },
 
@@ -135,7 +171,7 @@ export const useDiagramManager = create((set, get) => ({
     );
   },
 
-  addUserAccess: (diagramId, userEmail, role = 'editor') => {
+  addUserAccess: (diagramId: string, userEmail: string) => {
     set((state) => ({
       diagrams: state.diagrams.map(d =>
         d.id === diagramId
@@ -143,11 +179,7 @@ export const useDiagramManager = create((set, get) => ({
               ...d,
               shareSettings: {
                 ...d.shareSettings,
-                users: [...d.shareSettings.users, userEmail],
-                roles: {
-                  ...d.shareSettings.roles,
-                  [userEmail]: role
-                }
+                users: [...d.shareSettings.users, userEmail]
               },
               lastModified: new Date()
             }
@@ -156,7 +188,7 @@ export const useDiagramManager = create((set, get) => ({
     }));
   },
 
-  removeUserAccess: (diagramId, userEmail) => {
+  removeUserAccess: (diagramId: string, userEmail: string) => {
     set((state) => ({
       diagrams: state.diagrams.map(d =>
         d.id === diagramId
@@ -164,10 +196,7 @@ export const useDiagramManager = create((set, get) => ({
               ...d,
               shareSettings: {
                 ...d.shareSettings,
-                users: d.shareSettings.users.filter(u => u !== userEmail),
-                roles: Object.fromEntries(
-                  Object.entries(d.shareSettings.roles || {}).filter(([email]) => email !== userEmail)
-                )
+                users: d.shareSettings.users.filter(u => u !== userEmail)
               },
               lastModified: new Date()
             }
@@ -176,27 +205,7 @@ export const useDiagramManager = create((set, get) => ({
     }));
   },
 
-  updateUserRole: (diagramId, userEmail, role) => {
-    set((state) => ({
-      diagrams: state.diagrams.map(d =>
-        d.id === diagramId
-          ? {
-              ...d,
-              shareSettings: {
-                ...d.shareSettings,
-                roles: {
-                  ...d.shareSettings.roles,
-                  [userEmail]: role
-                }
-              },
-              lastModified: new Date()
-            }
-          : d
-      )
-    }));
-  },
-
-  saveDiagramData: (diagramId, nodes, edges) => {
+  saveDiagramData: (diagramId: string, nodes: C4Node[], edges: Edge[]) => {
     set((state) => ({
       diagrams: state.diagrams.map(d =>
         d.id === diagramId
@@ -216,7 +225,7 @@ export const useDiagramManager = create((set, get) => ({
     return diagrams.find(d => d.id === currentDiagramId) || null;
   },
 
-  updateDiagramActivity: (id) => {
+  updateDiagramActivity: (id: string) => {
     set((state) => ({
       diagrams: state.diagrams.map(d =>
         d.id === id 
@@ -228,7 +237,7 @@ export const useDiagramManager = create((set, get) => ({
 }));
 
 // Helper function to format time
-export const formatTimeAgo = (date) => {
+export const formatTimeAgo = (date: Date): string => {
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));

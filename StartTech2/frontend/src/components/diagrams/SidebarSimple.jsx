@@ -1,19 +1,18 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Modal } from './Modal.jsx';
-import { useDiagramManager, formatTimeAgo } from '../stores/diagramManager.js';
+import { useState, useEffect } from 'react';
+import { Modal } from './Modal';
+import { useDiagramManager, formatTimeAgo } from '../../stores/diagramManager.js';
 
 // Importações de assets para Vite
-import homelogo from '../assets/images/homelogo.png';
-import totvsSymbol from '../assets/totvs-symbol.svg';
-import diagramIcon from '../assets/diagram-icon.svg';
-import lupaIcon from '../assets/lupa-1.svg';
-import imageIcon from '../assets/image-9.svg';
-import usersIcon from '../assets/users-icon.svg';
+import homelogo from '../../imagens/homelogo.png';
+import totvsSymbol from '../../assets/totvs-symbol.svg';
+import diagramIcon from '../../assets/diagram-icon.svg';
+import lupaIcon from '../../assets/lupa-1.svg';
+import imageIcon from '../../assets/image-9.svg';
+import usersIcon from '../../assets/users-icon.svg';
 
-function Sidebar({ isMinimized, onToggle }) {
-  const navigate = useNavigate();
-  
+
+
+function Sidebar({ isMinimized, onToggle, onLoadDiagram }) {
   // Zustand store
   const {
     currentDiagramId,
@@ -24,8 +23,15 @@ function Sidebar({ isMinimized, onToggle }) {
     getFilteredDiagrams,
     addUserAccess,
     removeUserAccess,
-    getCurrentDiagram
+    getCurrentDiagram,
+    loadDiagramsFromDatabase,
+    isLoading
   } = useDiagramManager();
+
+  // Carregar diagramas do banco quando o componente monta
+  useEffect(() => {
+    loadDiagramsFromDatabase();
+  }, [loadDiagramsFromDatabase]);
 
   // Local state for modals
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -46,14 +52,14 @@ function Sidebar({ isMinimized, onToggle }) {
         {!isMinimized ? (
           <div className="flex items-center justify-between">
             <div className="flex flex-col items-center flex-1">
-              {/* Logo do Login */}
+              {/* Logo T-Draw */}
               <img 
                 src={homelogo}
-                alt="Logo" 
-                className="w-30 h-20 mb-2"
+                alt="T-Draw Logo" 
+                className="w-30 h-26 mb-2"
                 onError={(e) => {
                   e.currentTarget.src = "/src/assets/logo-totvs-fallback.png";
-                  e.currentTarget.className = "w-14 h-14 mb-2";
+                  e.currentTarget.className = "w-18 h-16 mb-2";
                 }}
               />
             </div>
@@ -70,12 +76,6 @@ function Sidebar({ isMinimized, onToggle }) {
           </div>
         ) : (
           <div className="flex flex-col items-center">
-            {/* Símbolo TOTVS quando minimizado */}
-            <img 
-              src={totvsSymbol} 
-              alt="TOTVS Symbol" 
-              className="w-8 h-8 mb-2 filter brightness-0 invert"
-            />
             {/* Botão menu hambúrguer quando minimizado */}
             <button
               onClick={onToggle}
@@ -153,7 +153,18 @@ function Sidebar({ isMinimized, onToggle }) {
               <h3 className="text-white text-xs font-semibold mb-3 opacity-75">
                 DIAGRAMAS RECENTES
               </h3>
-              {getFilteredDiagrams().map((diagram) => (
+              {isLoading ? (
+                <div className="text-center text-blue-200 py-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
+                  <p className="text-sm">Carregando diagramas...</p>
+                </div>
+              ) : getFilteredDiagrams().length === 0 ? (
+                <div className="text-center text-blue-200 py-4">
+                  <p className="text-sm">Nenhum diagrama encontrado</p>
+                  <p className="text-xs opacity-75 mt-1">Crie um novo diagrama para começar</p>
+                </div>
+              ) : (
+                getFilteredDiagrams().map((diagram) => (
                   <button
                     key={diagram.id}
                     onClick={() => selectDiagram(diagram.id)}
@@ -173,7 +184,8 @@ function Sidebar({ isMinimized, onToggle }) {
                       </div>
                     </div>
                   </button>
-                ))}
+                ))
+              )}
             </div>
           </div>
 
@@ -203,6 +215,20 @@ function Sidebar({ isMinimized, onToggle }) {
             title="Criar Diagrama"
           >
             <span className="text-xl">📊</span>
+          </button>
+          
+          {/* Botão Gerenciar Acessos na sidebar minimizada */}
+          <div className="flex-1"></div> {/* Spacer para empurrar o botão para baixo */}
+          <button
+            onClick={() => setIsAccessModalOpen(true)}
+            className="text-white hover:bg-blue-600 p-2 rounded transition-colors"
+            title="Gerenciar Acessos"
+          >
+            <img 
+              src={usersIcon} 
+              alt="Gerenciar Acessos" 
+              className="w-5 h-5 filter brightness-0 invert"
+            />
           </button>
         </div>
       )}

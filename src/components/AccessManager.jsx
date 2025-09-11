@@ -1,181 +1,215 @@
-/**
- * Gerenciador de Acessos - Página administrativa
- * Permite visualizar e gerenciar usuários com acesso aos diagramas
- */
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDiagramManager } from '../stores/diagramManager.js';
+import { useDiagramManager } from '../stores/diagramManager';
+import usersIcon from '../assets/users-icon.svg';
+import './AccessManager.css';
 
-export const AccessManager = () => {
+const AccessManager = () => {
   const navigate = useNavigate();
-  const { diagrams, addUserAccess, removeUserAccess } = useDiagramManager();
-  const [selectedDiagram, setSelectedDiagram] = useState(null);
-  const [newUserEmail, setNewUserEmail] = useState('');
+  const { diagrams, addUserAccess, removeUserAccess, updateUserRole } = useDiagramManager();
+  const [selectedProject, setSelectedProject] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [newCollaborators, setNewCollaborators] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
-  const handleBackToDiagram = () => {
-    navigate('/diagram');
-  };
+  const availableUsers = [
+    { id: 1, name: 'João Silva', email: 'joao@empresa.com' },
+    { id: 2, name: 'Maria Santos', email: 'maria@empresa.com' },
+    { id: 3, name: 'Pedro Costa', email: 'pedro@empresa.com' },
+    { id: 4, name: 'Ana Paula', email: 'ana@empresa.com' },
+    { id: 5, name: 'Carlos Oliveira', email: 'carlos@empresa.com' }
+  ];
 
-  const handleAddUser = (diagramId) => {
-    if (newUserEmail.trim() && newUserEmail.includes('@')) {
-      addUserAccess(diagramId, newUserEmail.trim());
-      setNewUserEmail('');
+  // Buscar projeto selecionado e seus membros
+  const selectedDiagram = diagrams.find(d => d.id === selectedProject);
+  const projectMembers = selectedDiagram?.shareSettings?.users || [];
+  const projectRoles = selectedDiagram?.shareSettings?.roles || {};
+
+  const filteredUsers = availableUsers.filter(user =>
+    (user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchTerm.toLowerCase())) &&
+    !projectMembers.includes(user.email) // Não mostrar usuários que já têm acesso
+  );
+
+  const addCollaborator = (user) => {
+    if (selectedProject && !projectMembers.includes(user.email)) {
+      addUserAccess(selectedProject, user.email);
+      setSearchTerm('');
+      setShowSuggestions(false);
     }
   };
 
-  const handleRemoveUser = (diagramId, userEmail) => {
-    removeUserAccess(diagramId, userEmail);
+  const removeCollaborator = (userEmail) => {
+    if (selectedProject) {
+      removeUserAccess(selectedProject, userEmail);
+    }
   };
 
-  const filteredDiagrams = diagrams.filter(diagram => 
-    diagram.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    diagram.users.some(user => user.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const updateAccess = (userEmail, accessLevel) => {
+    if (selectedProject && updateUserRole) {
+      updateUserRole(selectedProject, userEmail, accessLevel);
+    }
+  };
+
+  const getRoleName = (email) => {
+    const role = projectRoles[email];
+    if (role === 'owner') return 'Proprietário (controle total)';
+    if (role === 'editor') return 'Editor (pode ver e comentar)';
+    if (role === 'viewer') return 'Visualizador (pode ver)';
+    return 'Editor (pode ver e comentar)'; // Default
+  };
+
+  const getRoleValue = (email) => {
+    const role = projectRoles[email];
+    if (role === 'owner') return 'owner';
+    if (role === 'editor') return 'editor';
+    if (role === 'viewer') return 'viewer';
+    return 'editor'; // Default
+  };
+
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    setShowSuggestions(e.target.value.length > 0);
+  };
+
+  const handleSearchBlur = () => {
+    // Delay hiding to allow click on suggestions
+    setTimeout(() => setShowSuggestions(false), 200);
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={handleBackToDiagram}
-                className="flex items-center space-x-2 text-blue-600 hover:text-blue-800 transition-colors"
-              >
-                <span>←</span>
-                <span>Voltar ao Diagrama</span>
-              </button>
-              <div className="border-l border-gray-300 h-6"></div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                🔐 Gerenciador de Acessos
-              </h1>
-            </div>
-            <div className="text-sm text-gray-500">
-              {diagrams.length} diagrama(s) • {diagrams.reduce((total, d) => total + d.users.length, 0)} usuário(s)
-            </div>
-          </div>
+    <div className="access-manager">
+      <button className="back-button" onClick={() => navigate('/')}>
+        Voltar ao Diagrama
+      </button>
+
+      <div className="header">
+        <div className="header-icon">
+          <img src={usersIcon} alt="Users" className="header-icon-image" />
+        </div>
+        <h1 className="header-title">Gerenciar Acesso</h1>
+      </div>
+      
+      <div className="header-line"></div>
+
+      <div className="section">
+        <h2 className="section-title">Projeto</h2>
+        <div className="dropdown-container">
+          <select
+            className="dropdown"
+            value={selectedProject}
+            onChange={(e) => setSelectedProject(e.target.value)}
+          >
+            <option value="">Selecione um projeto</option>
+            {diagrams.map(diagram => (
+              <option key={diagram.id} value={diagram.id}>
+                {diagram.name}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Busca */}
-        <div className="mb-8">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Buscar por diagrama ou usuário..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <span className="text-gray-400">🔍</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Lista de Diagramas */}
-        <div className="space-y-6">
-          {filteredDiagrams.map((diagram) => (
-            <div key={diagram.id} className="bg-white rounded-lg shadow-sm border border-gray-200">
-              {/* Header do Diagrama */}
-              <div className="px-6 py-4 border-b border-gray-200">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">{diagram.name}</h3>
-                    <p className="text-sm text-gray-500">
-                      Criado em {diagram.createdAt} • {diagram.users.length} usuário(s) com acesso
-                    </p>
+      <div className="section">
+        <h2 className="section-title">Adicionar Pessoas</h2>
+        <div className="search-container">
+          <input
+            type="text"
+            className="search-input"
+            placeholder="Buscar usuário por nome ou email..."
+            value={searchTerm}
+            onChange={handleSearchChange}
+            onBlur={handleSearchBlur}
+            onFocus={() => searchTerm && setShowSuggestions(true)}
+          />
+          
+          {showSuggestions && searchTerm && (
+            <div className="suggestions-dropdown">
+              {filteredUsers.length > 0 ? (
+                filteredUsers.map(user => (
+                  <div
+                    key={user.id}
+                    className="suggestion-item"
+                    onClick={() => addCollaborator(user)}
+                  >
+                    <div className="suggestion-name">{user.name}</div>
+                    <div className="suggestion-email">{user.email}</div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      diagram.users.length > 1 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {diagram.users.length > 1 ? 'Compartilhado' : 'Privado'}
-                    </span>
-                  </div>
+                ))
+              ) : (
+                <div className="suggestion-item loading">
+                  {searchTerm ? 'Nenhum usuário disponível encontrado' : 'Digite para buscar usuários'}
                 </div>
-              </div>
+              )}
+            </div>
+          )}
 
-              {/* Lista de Usuários */}
-              <div className="px-6 py-4">
-                <div className="space-y-3">
-                  {diagram.users.map((userEmail, index) => (
-                    <div key={index} className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                          <span className="text-blue-600 font-medium">
-                            {userEmail.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{userEmail}</p>
-                          <p className="text-xs text-gray-500">
-                            {userEmail.includes('admin') ? 'Administrador' : 'Usuário'}
-                          </p>
-                        </div>
-                      </div>
-                      {diagram.users.length > 1 && !userEmail.includes('admin') && (
+          {/* Lista de membros atuais do projeto */}
+          {selectedProject && projectMembers.length > 0 && (
+            <div className="collaborators-list">
+              <div className="collaborators-title">Pessoas com acesso ({projectMembers.length})</div>
+              {projectMembers.map((email, index) => {
+                // Buscar nome do usuário na lista disponível
+                const user = availableUsers.find(u => u.email === email);
+                const userName = user ? user.name : email.split('@')[0]; // Se não encontrar, usar parte do email
+                
+                return (
+                  <div key={index} className="collaborator-item">
+                    <div className="collaborator-info">
+                      <div className="collaborator-name">{userName}</div>
+                      <div className="collaborator-email">{email}</div>
+                    </div>
+                    <div className="access-control">
+                      <select
+                        className="access-dropdown"
+                        value={getRoleValue(email)}
+                        onChange={(e) => {
+                          const roleMap = {
+                            'viewer': 'viewer',
+                            'editor': 'editor', 
+                            'owner': 'owner'
+                          };
+                          updateAccess(email, roleMap[e.target.value]);
+                        }}
+                      >
+                        <option value="viewer">Visualizador (pode ver)</option>
+                        <option value="editor">Editor (pode ver e comentar)</option>
+                        <option value="owner">Proprietário (controle total)</option>
+                      </select>
+                      {getRoleValue(email) !== 'owner' && (
                         <button
-                          onClick={() => handleRemoveUser(diagram.id, userEmail)}
-                          className="text-red-600 hover:text-red-800 text-sm font-medium transition-colors"
+                          className="remove-btn"
+                          onClick={() => removeCollaborator(email)}
+                          title="Remover usuário"
                         >
-                          Remover
+                          ×
                         </button>
                       )}
                     </div>
-                  ))}
-
-                  {/* Adicionar Novo Usuário */}
-                  <div className="flex items-center space-x-3 py-2 px-3 border-2 border-dashed border-gray-300 rounded-lg">
-                    <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                      <span className="text-gray-400">+</span>
-                    </div>
-                    <div className="flex-1 flex items-center space-x-2">
-                      <input
-                        type="email"
-                        placeholder="email@exemplo.com"
-                        value={newUserEmail}
-                        onChange={(e) => setNewUserEmail(e.target.value)}
-                        className="flex-1 border-0 bg-transparent text-sm focus:ring-0 focus:outline-none"
-                        onKeyPress={(e) => {
-                          if (e.key === 'Enter') {
-                            handleAddUser(diagram.id);
-                          }
-                        }}
-                      />
-                      <button
-                        onClick={() => handleAddUser(diagram.id)}
-                        disabled={!newUserEmail.trim() || !newUserEmail.includes('@')}
-                        className="px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-                      >
-                        Adicionar
-                      </button>
-                    </div>
                   </div>
-                </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Mensagem quando projeto selecionado mas sem membros */}
+          {selectedProject && projectMembers.length === 0 && (
+            <div className="collaborators-list">
+              <div className="collaborators-title">Pessoas com acesso (0)</div>
+              <div style={{ 
+                padding: '20px', 
+                textAlign: 'center', 
+                color: '#666',
+                fontStyle: 'italic' 
+              }}>
+                Nenhum membro adicionado ainda. Use a busca acima para adicionar colaboradores.
               </div>
             </div>
-          ))}
+          )}
         </div>
-
-        {filteredDiagrams.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-gray-400 text-6xl mb-4">🔍</div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Nenhum diagrama encontrado
-            </h3>
-            <p className="text-gray-500">
-              {searchTerm ? 'Tente ajustar sua busca' : 'Nenhum diagrama disponível'}
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );
 };
+
+export default AccessManager;

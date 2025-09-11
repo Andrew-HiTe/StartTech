@@ -1,19 +1,21 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Modal } from './Modal.jsx';
-import { useDiagramManager, formatTimeAgo } from '../stores/diagramManager.js';
+import { Modal } from './Modal';
+import { useDiagramManager, formatTimeAgo, type Diagram } from '../stores/diagramManager';
 
 // Importações de assets para Vite
-import homelogo from '../assets/images/homelogo.png';
+import totvsLogo from '../assets/logo-totvs-azul-escuro.svg';
 import totvsSymbol from '../assets/totvs-symbol.svg';
 import diagramIcon from '../assets/diagram-icon.svg';
 import lupaIcon from '../assets/lupa-1.svg';
 import imageIcon from '../assets/image-9.svg';
 import usersIcon from '../assets/users-icon.svg';
 
-function Sidebar({ isMinimized, onToggle }) {
-  const navigate = useNavigate();
-  
+interface SidebarProps {
+  isMinimized: boolean;
+  onToggle: () => void;
+}
+
+function Sidebar({ isMinimized, onToggle }: SidebarProps) {
   // Zustand store
   const {
     currentDiagramId,
@@ -31,7 +33,7 @@ function Sidebar({ isMinimized, onToggle }) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isAccessModalOpen, setIsAccessModalOpen] = useState(false);
   const [newDiagramName, setNewDiagramName] = useState('');
-  const [newDiagramType, setNewDiagramType] = useState('c4');
+  const [newDiagramType, setNewDiagramType] = useState<Diagram['type']>('c4');
   const [newUserEmail, setNewUserEmail] = useState('');
 
   return (
@@ -46,16 +48,19 @@ function Sidebar({ isMinimized, onToggle }) {
         {!isMinimized ? (
           <div className="flex items-center justify-between">
             <div className="flex flex-col items-center flex-1">
-              {/* Logo do Login */}
+              {/* Logo TOTVS */}
               <img 
-                src={homelogo}
-                alt="Logo" 
-                className="w-30 h-20 mb-2"
+                src={totvsLogo}
+                alt="TOTVS Logo" 
+                className="w-30 h-26 mb-2 filter brightness-0 invert"
                 onError={(e) => {
                   e.currentTarget.src = "/src/assets/logo-totvs-fallback.png";
-                  e.currentTarget.className = "w-14 h-14 mb-2";
+                  e.currentTarget.className = "w-18 h-16 mb-2";
                 }}
               />
+              <h1 className="text-white font-extrabold text-xl" style={{ fontFamily: 'Nunito Sans, sans-serif' }}>
+                T-Draw
+              </h1>
             </div>
             {/* Botão X para fechar */}
             <button
