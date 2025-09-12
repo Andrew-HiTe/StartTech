@@ -99,16 +99,6 @@ export const LoginForm = () => {
             className="login-input"
             disabled={loading}
           />
-
-          {/* Usuários de teste - design melhorado */}
-          <div className="login-test-users">
-            <p className="login-test-users-title">👤 Usuários de teste:</p>
-            <div className="login-test-users-list">
-              <div>• admin@starttech.com / admin</div>
-              <div>• editor@starttech.com / editor</div>
-              <div>• reader@starttech.com / reader</div>
-            </div>
-          </div>
           
           <button 
             className="login-button" 

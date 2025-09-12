@@ -6,6 +6,7 @@ import { useDiagramStore } from '../stores/diagramStore.js';
 
 // Importações de assets para Vite
 import homelogo from '../assets/images/homelogo.png';
+import homelogoSimbolo from '../assets/images/homelogo-simbolo.png';
 import totvsSymbol from '../assets/totvs-symbol.svg';
 import diagramIcon from '../assets/diagram-icon.svg';
 import lupaIcon from '../assets/lupa-1.svg';
@@ -133,10 +134,9 @@ function Sidebar({ isMinimized, onToggle }) {
         ) : (
           <div className="flex flex-col items-center">
             <img 
-              src={totvsSymbol} 
-              alt="TOTVS Symbol" 
+              src={homelogoSimbolo} 
+              alt="Logo Symbol" 
               className="w-8 h-8 mb-2"
-              style={{ filter: 'brightness(0) saturate(100%)', color: '#022b3a' }}
             />
             <button
               onClick={onToggle}
@@ -234,12 +234,12 @@ function Sidebar({ isMinimized, onToggle }) {
                         <h4 className="text-sm font-medium truncate" style={{ color: '#022b3a' }}>
                           {diagram.name}
                         </h4>
-                        <p className="text-xs opacity-75" style={{ color: '#022b3a' }}>
-                          {diagram.lastModified ? new Date(diagram.lastModified).toLocaleDateString() : 'Novo'}
+                        <p className="text-xs opacity-75 flex items-center gap-1" style={{ color: '#022b3a' }}>
+                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                          </svg>
+                          {diagram.lastModified ? new Date(diagram.lastModified).toLocaleDateString('pt-BR') : 'Novo'}
                         </p>
-                        {diagram.version && (
-                          <p className="text-xs opacity-50" style={{ color: '#022b3a' }}>v{diagram.version}</p>
-                        )}
                       </div>
                     </div>
                   </button>
