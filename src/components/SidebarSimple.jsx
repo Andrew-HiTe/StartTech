@@ -102,10 +102,10 @@ function Sidebar({ isMinimized, onToggle }) {
       className={`transition-all duration-300 flex flex-col h-screen ${
         isMinimized ? 'w-16' : 'w-64'
       }`}
-      style={{ backgroundColor: '#0457A7' }}
+      style={{ backgroundColor: '#eaf9ff' }}
     >
       {/* Header com Logo */}
-      <div className="p-4 border-b border-blue-400/30">
+      <div className="p-4 border-b" style={{ borderColor: '#d1ecf1' }}>
         {!isMinimized ? (
           <div className="flex items-center justify-between">
             <div className="flex flex-col items-center flex-1">
@@ -121,7 +121,8 @@ function Sidebar({ isMinimized, onToggle }) {
             </div>
             <button
               onClick={onToggle}
-              className="text-white hover:bg-blue-600 p-1 rounded transition-colors"
+              className="hover:bg-blue-100 p-1 rounded transition-colors"
+              style={{ color: '#022b3a' }}
               title="Fechar menu"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -134,11 +135,13 @@ function Sidebar({ isMinimized, onToggle }) {
             <img 
               src={totvsSymbol} 
               alt="TOTVS Symbol" 
-              className="w-8 h-8 mb-2 filter brightness-0 invert"
+              className="w-8 h-8 mb-2"
+              style={{ filter: 'brightness(0) saturate(100%)', color: '#022b3a' }}
             />
             <button
               onClick={onToggle}
-              className="text-white hover:bg-blue-600 p-2 rounded transition-colors"
+              className="hover:bg-blue-100 p-2 rounded transition-colors"
+              style={{ color: '#022b3a' }}
               title="Abrir menu"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -153,7 +156,7 @@ function Sidebar({ isMinimized, onToggle }) {
       {!isMinimized && (
         <>
           {/* Seção 1: Criar Diagrama */}
-          <div className="p-4 border-b border-blue-400/30">
+          <div className="p-4 border-b" style={{ borderColor: '#d1ecf1' }}>
             <button 
               onClick={() => setIsCreateModalOpen(true)}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded flex items-center gap-3 transition-colors"
@@ -168,19 +171,25 @@ function Sidebar({ isMinimized, onToggle }) {
           </div>
 
           {/* Seção 2: Busca */}
-          <div className="p-4 border-b border-blue-400/30">
+          <div className="p-4 border-b" style={{ borderColor: '#d1ecf1' }}>
             <div className="relative mb-4">
               <input
                 type="text"
                 placeholder="Buscar diagramas..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-blue-600 text-white placeholder-blue-200 p-2 rounded pl-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                className="w-full bg-white border-2 p-2 rounded pl-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                style={{ 
+                  color: '#022b3a', 
+                  borderColor: '#d1ecf1',
+                  backgroundColor: '#ffffff'
+                }}
               />
               <img 
                 src={lupaIcon} 
                 alt="Buscar" 
-                className="absolute left-2 top-2 w-6 h-6 filter brightness-0 invert"
+                className="absolute left-2 top-2 w-6 h-6"
+                style={{ filter: 'brightness(0) saturate(100%)', color: '#022b3a' }}
               />
             </div>
           </div>
@@ -188,20 +197,20 @@ function Sidebar({ isMinimized, onToggle }) {
           {/* Seção 3: Lista de Diagramas */}
           <div className="flex-1 overflow-y-auto">
             <div className="p-4">
-              <h3 className="text-white text-xs font-semibold mb-3 opacity-75">
+              <h3 className="text-xs font-semibold mb-3 opacity-75" style={{ color: '#022b3a' }}>
                 DIAGRAMAS RECENTES
               </h3>
               
               {isLoading ? (
-                <div className="text-blue-100 text-sm p-3 text-center">
+                <div className="text-sm p-3 text-center" style={{ color: '#022b3a' }}>
                   🔄 Carregando diagramas...
                 </div>
               ) : error ? (
-                <div className="text-red-300 text-sm p-3 text-center">
+                <div className="text-red-600 text-sm p-3 text-center">
                   ❌ Erro: {error}
                 </div>
               ) : getFilteredDiagrams().length === 0 ? (
-                <div className="text-blue-100 text-sm p-3 text-center opacity-75">
+                <div className="text-sm p-3 text-center opacity-75" style={{ color: '#022b3a' }}>
                   📝 Nenhum diagrama encontrado
                 </div>
               ) : (
@@ -211,20 +220,25 @@ function Sidebar({ isMinimized, onToggle }) {
                     onClick={() => handleSelectDiagram(diagram.id)}
                     className={`w-full p-3 rounded-lg text-left transition-colors mb-2 ${
                       diagram.isActive 
-                        ? 'bg-blue-600 border border-blue-400' 
-                        : 'bg-blue-700 hover:bg-blue-600'
+                        ? 'border-2' 
+                        : 'hover:bg-blue-50'
                     }`}
+                    style={{ 
+                      backgroundColor: diagram.isActive ? '#d1ecf1' : '#ffffff',
+                      borderColor: diagram.isActive ? '#022b3a' : '#d1ecf1',
+                      border: diagram.isActive ? '2px solid #022b3a' : '1px solid #d1ecf1'
+                    }}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1 min-w-0">
-                        <h4 className="text-white text-sm font-medium truncate">
+                        <h4 className="text-sm font-medium truncate" style={{ color: '#022b3a' }}>
                           {diagram.name}
                         </h4>
-                        <p className="text-blue-200 text-xs opacity-75">
+                        <p className="text-xs opacity-75" style={{ color: '#022b3a' }}>
                           {diagram.lastModified ? new Date(diagram.lastModified).toLocaleDateString() : 'Novo'}
                         </p>
                         {diagram.version && (
-                          <p className="text-xs opacity-50">v{diagram.version}</p>
+                          <p className="text-xs opacity-50" style={{ color: '#022b3a' }}>v{diagram.version}</p>
                         )}
                       </div>
                     </div>
