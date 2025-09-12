@@ -10,6 +10,7 @@ import homelogoSimbolo from '../assets/images/homelogo-simbolo.png';
 import totvsSymbol from '../assets/totvs-symbol.svg';
 import diagramIcon from '../assets/diagram-icon.svg';
 import lupaIcon from '../assets/lupa-1.svg';
+import deleteIcon from '../assets/delete-icon.svg';
 
 function Sidebar({ isMinimized, onToggle }) {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ function Sidebar({ isMinimized, onToggle }) {
     searchTerm,
     createDiagram,
     selectDiagram,
+    deleteDiagram,
     setSearchTerm,
     getFilteredDiagrams,
     initializeDiagrams,
@@ -34,6 +36,8 @@ function Sidebar({ isMinimized, onToggle }) {
 
   // Local state for modals
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [diagramToDelete, setDiagramToDelete] = useState(null);
   const [newDiagramName, setNewDiagramName] = useState('');
   const [newDiagramType, setNewDiagramType] = useState('c4');
 
@@ -96,6 +100,40 @@ function Sidebar({ isMinimized, onToggle }) {
       console.error('❌ Erro ao criar diagrama:', error);
       alert(`Erro ao criar diagrama: ${error.message}`);
     }
+  };
+
+  // Handler para excluir diagrama
+  const handleDeleteDiagram = async () => {
+    if (!diagramToDelete) return;
+
+    try {
+      console.log(`🗑️ Excluindo diagrama: "${diagramToDelete.name}"`);
+      
+      const result = await deleteDiagram(diagramToDelete.id);
+      
+      if (result.success) {
+        console.log(`✅ Diagrama "${diagramToDelete.name}" excluído com sucesso`);
+        
+        // Fechar modal e limpar estado
+        setIsDeleteModalOpen(false);
+        setDiagramToDelete(null);
+        
+        // Recarregar lista
+        await initializeDiagrams();
+      } else {
+        console.error('❌ Erro ao excluir diagrama:', result.error);
+        alert(`Erro ao excluir diagrama: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('❌ Erro ao excluir diagrama:', error);
+      alert(`Erro ao excluir diagrama: ${error.message}`);
+    }
+  };
+
+  // Handler para abrir modal de confirmação de exclusão
+  const handleConfirmDelete = (diagram) => {
+    setDiagramToDelete(diagram);
+    setIsDeleteModalOpen(true);
   };
 
   return (
@@ -215,10 +253,9 @@ function Sidebar({ isMinimized, onToggle }) {
                 </div>
               ) : (
                 getFilteredDiagrams().map((diagram) => (
-                  <button
+                  <div
                     key={diagram.id}
-                    onClick={() => handleSelectDiagram(diagram.id)}
-                    className={`w-full p-3 rounded-lg text-left transition-colors mb-2 ${
+                    className={`w-full p-3 rounded-lg text-left transition-colors mb-2 flex items-center justify-between ${
                       diagram.isActive 
                         ? 'border-2' 
                         : 'hover:bg-blue-50'
@@ -229,7 +266,10 @@ function Sidebar({ isMinimized, onToggle }) {
                       border: diagram.isActive ? '2px solid #022b3a' : '1px solid #d1ecf1'
                     }}
                   >
-                    <div className="flex items-center justify-between">
+                    <button
+                      onClick={() => handleSelectDiagram(diagram.id)}
+                      className="flex-1 text-left"
+                    >
                       <div className="flex-1 min-w-0">
                         <h4 className="text-sm font-medium truncate" style={{ color: '#022b3a' }}>
                           {diagram.name}
@@ -241,8 +281,23 @@ function Sidebar({ isMinimized, onToggle }) {
                           {diagram.lastModified ? new Date(diagram.lastModified).toLocaleDateString('pt-BR') : 'Novo'}
                         </p>
                       </div>
-                    </div>
-                  </button>
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleConfirmDelete(diagram);
+                      }}
+                      className="ml-2 p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                      title="Excluir diagrama"
+                    >
+                      <img 
+                        src={deleteIcon} 
+                        alt="Excluir" 
+                        className="w-4 h-4 filter brightness-0 saturate-100%"
+                        style={{ filter: 'invert(38%) sepia(85%) saturate(2127%) hue-rotate(334deg) brightness(91%) contrast(96%)' }}
+                      />
+                    </button>
+                  </div>
                 ))
               )}
             </div>
@@ -298,6 +353,50 @@ function Sidebar({ isMinimized, onToggle }) {
               className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               Criar Diagrama
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal Confirmar Exclusão */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setDiagramToDelete(null);
+        }}
+        title="Confirmar Exclusão"
+      >
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 p-4 bg-red-50 rounded-lg">
+            <svg className="w-6 h-6 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <div>
+              <h4 className="font-medium text-red-900">Atenção!</h4>
+              <p className="text-sm text-red-700">
+                Tem certeza que deseja excluir o diagrama <strong>"{diagramToDelete?.name}"</strong>?
+              </p>
+              <p className="text-xs text-red-600 mt-1">
+                Esta ação não pode ser desfeita.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2 pt-4">
+            <button
+              onClick={() => {
+                setIsDeleteModalOpen(false);
+                setDiagramToDelete(null);
+              }}
+              className="flex-1 px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleDeleteDiagram}
+              className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Excluir Diagrama
             </button>
           </div>
         </div>
