@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.jsx';
 
 export const Header = ({ 
-  projectName, 
   diagramName = "DIAGRAMA", 
   onDiagramNameChange 
 }) => {
@@ -42,10 +41,6 @@ export const Header = ({
       <div className="flex items-center justify-between">
         {/* Project Info */}
         <div className="flex items-center gap-2">
-          <h1 className="text-gray-800 font-semibold" style={{ fontSize: '24px', fontFamily: 'Nunito Sans, sans-serif' }}>
-            {projectName}
-          </h1>
-          
           {isEditingDiagramName ? (
             <input
               type="text"
@@ -53,17 +48,18 @@ export const Header = ({
               onChange={(e) => setEditValue(e.target.value)}
               onBlur={handleEditSubmit}
               onKeyDown={handleKeyDown}
-              className="text-gray-600 font-semibold text-lg uppercase tracking-wide bg-yellow-50 border-2 border-yellow-400 rounded px-2 py-1 focus:outline-none focus:border-yellow-500"
+              className="text-gray-800 font-bold text-2xl uppercase tracking-wide bg-yellow-50 border-2 border-yellow-400 rounded px-3 py-2 focus:outline-none focus:border-yellow-500"
               autoFocus
               style={{ fontFamily: 'Nunito Sans, sans-serif' }}
             />
           ) : (
             <span 
-              className={`text-gray-600 font-semibold text-lg uppercase tracking-wide ${
-                onDiagramNameChange ? 'cursor-pointer hover:bg-gray-100 px-2 py-1 rounded transition-colors' : ''
+              className={`text-gray-800 font-bold text-2xl uppercase tracking-wide ${
+                onDiagramNameChange ? 'cursor-pointer hover:bg-gray-100 px-3 py-2 rounded transition-colors' : ''
               }`}
               onClick={handleDiagramNameClick}
               title={onDiagramNameChange ? 'Clique para editar o nome do diagrama' : ''}
+              style={{ fontFamily: 'Nunito Sans, sans-serif' }}
             >
               {diagramName}
             </span>

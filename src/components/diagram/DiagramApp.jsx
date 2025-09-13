@@ -466,7 +466,6 @@ function DiagramFlow({ isSidebarMinimized, setIsSidebarMinimized }) {
       <div className="flex-1 flex flex-col">
         {/* Header */}
         <Header 
-          projectName="T-Draw" 
           diagramName={getCurrentDiagram()?.name || diagramName}
           onDiagramNameChange={handleDiagramNameChange}
         />
