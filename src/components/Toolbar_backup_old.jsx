@@ -185,26 +185,7 @@ export const Toolbar = () => {
           </div>
         )}
 
-        {/* Manual save button (only when auto-save is off) */}
-        {!autoSaveEnabled && (
-          <button
-            onClick={handleManualSave}
-            disabled={!isDirty || saveStatus === 'saving'}
-            className="px-3 py-1.5 rounded-md text-sm font-medium bg-green-100 text-green-700 hover:bg-green-200 transition-colors disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
-          >
-            💾 Salvar
-          </button>
-        )}
-
-        <button
-          className="px-3 py-1.5 rounded-md text-sm font-medium bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors"
-          onClick={exportDiagram}
-          title="Exportar diagrama como arquivo JSON"
-        >
-          📄 Exportar JSON
-        </button>
-
-        {/* Info icon with hover instructions - moved to last position */}
+        {/* Info icon with hover instructions */}
         <div className="relative group">
           <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center cursor-help">
             <span className="text-blue-600 text-xs">ℹ️</span>
@@ -227,10 +208,10 @@ export const Toolbar = () => {
               <div className="border-t border-gray-600 pt-2">
                 <div className="font-semibold text-gray-200 mb-1">Ferramentas:</div>
                 <div className="space-y-1">
-                  <div><strong className="text-green-300">🖱️ Selecionar:</strong> Selecionar e conectar elementos</div>
+                  <div><strong className="text-green-300">�️ Selecionar:</strong> Selecionar e conectar elementos</div>
                   <div><strong className="text-green-300">📊 Adicionar Tabela:</strong> Clique no canvas para criar tabela</div>
                   <div><strong className="text-green-300">💾 Salvar:</strong> Salva no banco de dados</div>
-                  <div><strong className="text-green-300">📄 Exportar:</strong> Exporta como JSON</div>
+                  <div><strong className="text-green-300">📤 Exportar:</strong> Exporta como JSON</div>
                 </div>
               </div>
               
@@ -242,6 +223,25 @@ export const Toolbar = () => {
             <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-800"></div>
           </div>
         </div>
+
+        {/* Manual save button (only when auto-save is off) */}
+        {!autoSaveEnabled && (
+          <button
+            onClick={handleManualSave}
+            disabled={!isDirty || saveStatus === 'saving'}
+            className="px-3 py-1.5 rounded-md text-sm font-medium bg-green-100 text-green-700 hover:bg-green-200 transition-colors disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+          >
+            💾 Salvar
+          </button>
+        )}
+
+        <button
+          className="px-3 py-1.5 rounded-md text-sm font-medium bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors"
+          onClick={exportDiagram}
+          title="Exportar diagrama como arquivo JSON"
+        >
+          � Exportar JSON
+        </button>
       </div>
     </div>
   );

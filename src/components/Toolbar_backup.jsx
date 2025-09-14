@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useDiagramStore } from '../stores/diagramStore.js';
 
 export const Toolbar = () => {
+  const [showLoadDialog, setShowLoadDialog] = useState(false);
   const { 
     currentTool, 
     setCurrentTool, 
@@ -13,9 +14,12 @@ export const Toolbar = () => {
     exportDiagram,
     diagramName,
     saveDiagramToDB,
+    loadDiagramFromDB,
     isDirty,
     autoSaveEnabled,
+    toggleAutoSave,
     currentDiagramId,
+    createNewDiagram,
     markDirty
   } = useDiagramStore();
 
@@ -122,6 +126,11 @@ export const Toolbar = () => {
     }
   };
 
+  const handleNewDiagram = () => {
+    createNewDiagram();
+    setSaveStatus('saved');
+  };
+
   const toolButtons = [
     {
       id: 'select',
@@ -136,6 +145,13 @@ export const Toolbar = () => {
       icon: '📊',
       active: currentTool === 'add-table',
       description: 'Clique ou arraste no canvas para adicionar nova tabela'
+    },
+    {
+      id: 'add-system',
+      label: 'Adicionar Sistema',
+      icon: '🖥️',
+      active: currentTool === 'add-system',
+      description: 'Clique ou arraste no canvas para adicionar novo sistema'
     }
   ];
 
@@ -171,18 +187,47 @@ export const Toolbar = () => {
       </div>
 
       <div className="flex items-center space-x-2">
+        {/* Auto-save toggle */}
+        <label className="flex items-center space-x-2 text-sm text-gray-600">
+          <input
+            type="checkbox"
+            checked={autoSaveEnabled}
+            onChange={toggleAutoSave}
+            className="rounded"
+          />
+          <span>Auto-salvar</span>
+        </label>
+
         {/* Save status indicator */}
-        {saveStatus === 'saved' && currentDiagramId && (
-          <span className="text-xs text-green-600 font-medium flex items-center">
-            ✓ Salvo no banco
+        <div className="flex items-center space-x-1">
+          {saveStatus === 'saving' && (
+            <div className="flex items-center space-x-1 text-blue-600">
+              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+              <span className="text-xs">Salvando...</span>
+            </div>
+          )}
+          {saveStatus === 'dirty' && autoSaveEnabled && (
+            <span className="text-xs text-orange-600 font-medium">
+              • Alterações detectadas
+            </span>
+          )}
+          {saveStatus === 'dirty' && !autoSaveEnabled && (
+            <span className="text-xs text-red-600 font-medium">
+              • Não salvo
+            </span>
+          )}
+          {saveStatus === 'saved' && (
+            <span className="text-xs text-green-600 font-medium">
+              ✓ Salvo
+            </span>
+          )}
+        </div>
+
+        {/* Current diagram name */}
+        {diagramName && (
+          <span className="text-sm text-gray-600 font-medium max-w-32 truncate">
+            {diagramName}
           </span>
-        )}
-        
-        {saveStatus === 'saving' && (
-          <div className="flex items-center space-x-1 text-blue-600">
-            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
-            <span className="text-xs">Salvando...</span>
-          </div>
         )}
 
         {/* Manual save button (only when auto-save is off) */}
@@ -196,53 +241,49 @@ export const Toolbar = () => {
           </button>
         )}
 
+        {/* New diagram button */}
+        <button
+          onClick={handleNewDiagram}
+          className="px-3 py-1.5 rounded-md text-sm font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
+        >
+          � Novo
+        </button>
+
+        {/* Load button */}
+        <button
+          className="px-3 py-1.5 rounded-md text-sm font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
+          onClick={() => setShowLoadDialog(true)}
+        >
+          📂 Carregar
+        </button>
+
         <button
           className="px-3 py-1.5 rounded-md text-sm font-medium bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors"
           onClick={exportDiagram}
-          title="Exportar diagrama como arquivo JSON"
         >
-          📄 Exportar JSON
+          📤 Exportar
         </button>
+      </div>
 
-        {/* Info icon with hover instructions - moved to last position */}
-        <div className="relative group">
-          <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center cursor-help">
-            <span className="text-blue-600 text-xs">ℹ️</span>
-          </div>
-          
-          {/* Tooltip with instructions */}
-          <div className="absolute right-0 bottom-full mb-2 w-96 bg-gray-800 text-white text-xs rounded-lg p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
-            <div className="space-y-3">
-              <div>
-                <div className="font-semibold text-gray-200 mb-2">Como Usar:</div>
-                <div className="space-y-1.5">
-                  <div><strong className="text-blue-300">Mover:</strong> Arraste a tabela</div>
-                  <div><strong className="text-blue-300">Conectar:</strong> Arraste pelos pontos azuis nas bordas</div>
-                  <div><strong className="text-blue-300">Editar:</strong> Duplo clique no texto</div>
-                  <div><strong className="text-blue-300">Adicionar:</strong> Clique no canvas (modo adicionar)</div>
-                  <div><strong className="text-blue-300">Excluir:</strong> Selecione + botão excluir</div>
-                </div>
-              </div>
-              
-              <div className="border-t border-gray-600 pt-2">
-                <div className="font-semibold text-gray-200 mb-1">Ferramentas:</div>
-                <div className="space-y-1">
-                  <div><strong className="text-green-300">🖱️ Selecionar:</strong> Selecionar e conectar elementos</div>
-                  <div><strong className="text-green-300">📊 Adicionar Tabela:</strong> Clique no canvas para criar tabela</div>
-                  <div><strong className="text-green-300">💾 Salvar:</strong> Salva no banco de dados</div>
-                  <div><strong className="text-green-300">📄 Exportar:</strong> Exporta como JSON</div>
-                </div>
-              </div>
-              
-              <div className="border-t border-gray-600 pt-2 text-gray-300">
-                <div>{nodes.length} tabela(s) • {edges.length} conexão(ões)</div>
-              </div>
+      {/* Load Dialog */}
+      {showLoadDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96 max-w-[90vw]">
+            <h3 className="text-lg font-semibold mb-4">Carregar Diagrama</h3>
+            <p className="text-gray-600 mb-4">
+              Use a barra lateral à esquerda para selecionar um diagrama.
+            </p>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowLoadDialog(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Fechar
+              </button>
             </div>
-            {/* Arrow pointing down */}
-            <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-800"></div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

@@ -551,22 +551,6 @@ function DiagramFlow({ isSidebarMinimized, setIsSidebarMinimized }) {
               <Panel position="bottom-center">
                 <Toolbar />
               </Panel>
-
-              <Panel position="top-right" className="bg-white p-4 rounded-lg shadow-lg border">
-                <div className="text-sm space-y-2">
-                  <h3 className="font-semibold text-gray-800 mb-2">Como Usar:</h3>
-                  <div className="space-y-1 text-xs text-gray-600">
-                    <div><strong>Mover:</strong> Arraste a tabela</div>
-                    <div><strong>Conectar:</strong> Arraste pelos pontos azuis nas bordas</div>
-                    <div><strong>Editar:</strong> Duplo clique no texto</div>
-                    <div><strong>Adicionar:</strong> Clique no canvas (modo adicionar)</div>
-                    <div><strong>Excluir:</strong> Selecione + botão excluir</div>
-                  </div>
-                  <div className="text-xs mt-2 pt-2 border-t">
-                    <div>{nodes.length} tabela(s) • {edges.length} conexão(ões)</div>
-                  </div>
-                </div>
-              </Panel>
             </ReactFlow>
         </div>
       </div>
