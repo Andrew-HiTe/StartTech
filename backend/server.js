@@ -738,195 +738,523 @@ app.get('/api/diagrams/:diagramId/my-permissions', authenticateToken, async (req
 // ROTAS SIMPLIFICADAS DE CONTROLE DE ACESSO
 // ====================================================
 
-// 📋 Rota simplificada para classificações de diagrama
+// 📋 Buscar classificações do diagrama (FUNCIONANDO COM BD)
 app.get('/api/diagrams/:diagramId/classifications', authenticateToken, async (req, res) => {
   try {
-    console.log('📋 Acessando classificações para diagrama:', req.params.diagramId);
+    const { diagramId } = req.params;
+    console.log('📋 Buscando classificações para diagrama:', diagramId);
     
-    // Retornar classificações padrão + classificações criadas dinamicamente
+    const connection = await connectDB();
+    
+    // Verificar se o usuário tem acesso ao diagrama
+    let query, params;
+    
     if (req.user.role === 'admin') {
-      const defaultClassifications = [
-        { id: 1, name: 'Público', description: 'Acesso público', color: '#10B981', isDefault: true },
-        { id: 2, name: 'Restrito', description: 'Acesso restrito', color: '#F59E0B', isDefault: false },
-        { id: 3, name: 'Confidencial', description: 'Acesso confidencial', color: '#EF4444', isDefault: false }
-      ];
-      
-      // Combinar classificações padrão com as criadas dinamicamente
-      const allClassifications = [...defaultClassifications, ...createdClassifications];
-      console.log('📋 Retornando', allClassifications.length, 'classificações');
-      
-      res.json(allClassifications);
+      query = `SELECT d.id, d.user_id, 'admin' as access_level
+               FROM diagrams d
+               WHERE d.id = ? AND d.is_active = 1`;
+      params = [diagramId];
     } else {
-      res.json([]);
+      query = `SELECT d.id, d.user_id, COALESCE(da.access_level, 'none') as access_level
+               FROM diagrams d
+               LEFT JOIN diagram_access da ON d.id = da.diagram_id AND da.user_email = ? AND da.is_active = 1
+               WHERE d.id = ? AND d.is_active = 1
+               AND (d.user_id = ? OR da.is_active = 1)`;
+      params = [req.user.email, diagramId, req.user.userId];
     }
+    
+    const [accessCheck] = await connection.execute(query, params);
+
+    if (accessCheck.length === 0) {
+      await connection.end();
+      return res.status(403).json({ error: 'Acesso negado ao diagrama' });
+    }
+
+    // Buscar classificações do diagrama
+    const [classifications] = await connection.execute(`
+      SELECT 
+        dc.*,
+        u.name as created_by_name,
+        COUNT(DISTINCT cp.id) as users_with_permission,
+        COUNT(DISTINCT tc.id) as tables_with_classification
+      FROM diagram_classifications dc
+      LEFT JOIN users u ON dc.created_by = u.id
+      LEFT JOIN classification_permissions cp ON dc.id = cp.classification_id AND cp.is_active = 1
+      LEFT JOIN table_classifications tc ON dc.id = tc.classification_id AND tc.is_active = 1
+      WHERE dc.diagram_id = ? AND dc.is_active = 1
+      GROUP BY dc.id, dc.name, dc.description, dc.color, dc.display_order, dc.is_default, dc.is_active, dc.created_by, dc.created_at, dc.updated_at, u.name
+      ORDER BY dc.display_order, dc.name
+    `, [diagramId]);
+
+    await connection.end();
+
+    console.log(`✅ Encontradas ${classifications.length} classificações`);
+    res.json({
+      success: true,
+      classifications,
+      hasEditAccess: req.user.role === 'admin' || 
+                     accessCheck[0].user_id === req.user.userId || 
+                     ['edit', 'admin'].includes(accessCheck[0].access_level)
+    });
+
   } catch (error) {
     console.error('❌ Erro ao buscar classificações:', error);
-    res.status(500).json({ error: 'Erro ao buscar classificações' });
+    res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 
-// ➕ Rota simplificada para criar classificação
+// ➕ Criar nova classificação (FUNCIONANDO COM BD)
 app.post('/api/diagrams/:diagramId/classifications', authenticateToken, async (req, res) => {
   try {
-    console.log('➕ Criando classificação para diagrama:', req.params.diagramId);
+    const { diagramId } = req.params;
+    const { name, description, color, isDefault } = req.body;
+    
+    console.log('➕ Criando classificação para diagrama:', diagramId);
     console.log('📝 Dados recebidos:', req.body);
-    
-    // Verificar se é admin
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Apenas administradores podem criar classificações' });
-    }
 
-    const { name, description, level } = req.body;
-    
     if (!name || !name.trim()) {
       return res.status(400).json({ error: 'Nome da classificação é obrigatório' });
     }
 
-    // Simular criação da classificação (retornar um ID fictício)
-    const newClassification = {
-      id: Date.now(), // ID temporário baseado em timestamp
-      name: name.trim(),
-      description: description || '',
-      color: level === 'high' ? '#EF4444' : level === 'medium' ? '#F59E0B' : '#10B981',
-      isDefault: false,
-      createdAt: new Date().toISOString()
-    };
+    const connection = await connectDB();
+    
+    // Verificar permissão de edição no diagrama
+    let query, params;
+    if (req.user.role === 'admin') {
+      query = `SELECT d.id, d.user_id, 'admin' as access_level
+               FROM diagrams d WHERE d.id = ? AND d.is_active = 1`;
+      params = [diagramId];
+    } else {
+      query = `SELECT d.id, d.user_id, COALESCE(da.access_level, 'none') as access_level
+               FROM diagrams d
+               LEFT JOIN diagram_access da ON d.id = da.diagram_id AND da.user_email = ? AND da.is_active = 1
+               WHERE d.id = ? AND d.is_active = 1
+               AND (d.user_id = ? OR da.access_level IN ('edit', 'admin'))`;
+      params = [req.user.email, diagramId, req.user.userId];
+    }
 
-    // Adicionar ao array em memória
-    createdClassifications.push(newClassification);
+    const [accessCheck] = await connection.execute(query, params);
 
-    console.log('✅ Classificação criada:', newClassification);
-    console.log('📋 Total de classificações criadas:', createdClassifications.length);
-    res.status(201).json(newClassification);
+    if (accessCheck.length === 0) {
+      await connection.end();
+      return res.status(403).json({ error: 'Permissão insuficiente para criar classificação' });
+    }
+
+    // Se esta será a classificação padrão, remover flag das outras
+    if (isDefault) {
+      await connection.execute(`
+        UPDATE diagram_classifications 
+        SET is_default = FALSE 
+        WHERE diagram_id = ? AND is_active = 1
+      `, [diagramId]);
+    }
+
+    // Inserir nova classificação
+    const [result] = await connection.execute(`
+      INSERT INTO diagram_classifications 
+      (diagram_id, name, description, color, is_default, created_by, is_active)
+      VALUES (?, ?, ?, ?, ?, ?, TRUE)
+    `, [diagramId, name.trim(), description || '', color || '#3B82F6', isDefault || false, req.user.userId]);
+
+    // Buscar a classificação criada
+    const [newClassification] = await connection.execute(`
+      SELECT dc.*, u.name as created_by_name
+      FROM diagram_classifications dc
+      LEFT JOIN users u ON dc.created_by = u.id
+      WHERE dc.id = ?
+    `, [result.insertId]);
+
+    await connection.end();
+
+    console.log('✅ Classificação criada com sucesso:', newClassification[0]);
+    res.status(201).json({
+      success: true,
+      classification: newClassification[0],
+      message: 'Classificação criada com sucesso'
+    });
 
   } catch (error) {
     console.error('❌ Erro ao criar classificação:', error);
-    res.status(500).json({ error: 'Erro ao criar classificação' });
+    if (error.code === 'ER_DUP_ENTRY') {
+      res.status(400).json({ error: 'Já existe uma classificação com este nome neste diagrama' });
+    } else {
+      res.status(500).json({ error: 'Erro interno do servidor' });
+    }
   }
 });
 
-// ✏️ Rota para editar classificação
+// ✏️ Rota para editar classificação (FUNCIONANDO COM BD)
 app.put('/api/classifications/:id', authenticateToken, async (req, res) => {
   try {
     const classificationId = parseInt(req.params.id);
     console.log('✏️ Editando classificação ID:', classificationId);
     
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Apenas administradores podem editar classificações' });
-    }
-
-    const { name, description, color, level } = req.body;
+    const { name, description, color, isDefault } = req.body;
     
     if (!name || !name.trim()) {
       return res.status(400).json({ error: 'Nome da classificação é obrigatório' });
     }
 
-    // Encontrar a classificação no array
-    const index = createdClassifications.findIndex(c => c.id === classificationId);
+    const connection = await connectDB();
+
+    // Verificar se a classificação existe e se o usuário tem permissão
+    const [classification] = await connection.execute(`
+      SELECT dc.*, d.user_id as diagram_owner
+      FROM diagram_classifications dc
+      JOIN diagrams d ON dc.diagram_id = d.id
+      WHERE dc.id = ? AND dc.is_active = 1
+    `, [classificationId]);
     
-    if (index === -1) {
+    if (classification.length === 0) {
+      await connection.end();
       return res.status(404).json({ error: 'Classificação não encontrada' });
     }
 
+    const classData = classification[0];
+
+    // Verificar permissão (admin ou dono do diagrama)
+    if (req.user.role !== 'admin' && req.user.userId !== classData.diagram_owner) {
+      // Verificar se tem acesso de edição ao diagrama
+      const [access] = await connection.execute(`
+        SELECT access_level FROM diagram_access 
+        WHERE diagram_id = ? AND user_email = ? AND is_active = 1
+      `, [classData.diagram_id, req.user.email]);
+      
+      if (access.length === 0 || !['edit', 'admin'].includes(access[0].access_level)) {
+        await connection.end();
+        return res.status(403).json({ error: 'Permissão insuficiente para editar classificação' });
+      }
+    }
+
+    // Se será a classificação padrão, remover flag das outras
+    if (isDefault && !classData.is_default) {
+      await connection.execute(`
+        UPDATE diagram_classifications 
+        SET is_default = FALSE 
+        WHERE diagram_id = ? AND id != ? AND is_active = 1
+      `, [classData.diagram_id, classificationId]);
+    }
+
     // Atualizar a classificação
-    const updatedClassification = {
-      ...createdClassifications[index],
-      name: name.trim(),
-      description: description || '',
-      color: color || (level === 'high' ? '#EF4444' : level === 'medium' ? '#F59E0B' : '#10B981'),
-      updatedAt: new Date().toISOString()
-    };
+    await connection.execute(`
+      UPDATE diagram_classifications 
+      SET name = ?, description = ?, color = ?, is_default = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `, [name.trim(), description || '', color || classData.color, isDefault || false, classificationId]);
 
-    createdClassifications[index] = updatedClassification;
+    // Buscar a classificação atualizada
+    const [updated] = await connection.execute(`
+      SELECT dc.*, u.name as created_by_name
+      FROM diagram_classifications dc
+      LEFT JOIN users u ON dc.created_by = u.id
+      WHERE dc.id = ?
+    `, [classificationId]);
 
-    console.log('✅ Classificação atualizada:', updatedClassification);
-    res.json(updatedClassification);
+    await connection.end();
+
+    console.log('✅ Classificação atualizada:', updated[0]);
+    res.json({
+      success: true,
+      classification: updated[0],
+      message: 'Classificação atualizada com sucesso'
+    });
 
   } catch (error) {
     console.error('❌ Erro ao editar classificação:', error);
-    res.status(500).json({ error: 'Erro ao editar classificação' });
+    if (error.code === 'ER_DUP_ENTRY') {
+      res.status(400).json({ error: 'Já existe uma classificação com este nome neste diagrama' });
+    } else {
+      res.status(500).json({ error: 'Erro interno do servidor' });
+    }
   }
 });
 
-// 🗑️ Rota para deletar classificação
+// 🗑️ Rota para deletar classificação (FUNCIONANDO COM BD)
 app.delete('/api/classifications/:id', authenticateToken, async (req, res) => {
   try {
     const classificationId = parseInt(req.params.id);
     console.log('🗑️ Deletando classificação ID:', classificationId);
     
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Apenas administradores podem deletar classificações' });
-    }
+    const connection = await connectDB();
 
-    // Verificar se não é uma classificação padrão (IDs 1, 2, 3)
-    if (classificationId <= 3) {
-      return res.status(400).json({ error: 'Não é possível deletar classificações padrão' });
-    }
-
-    // Encontrar e remover a classificação do array
-    const index = createdClassifications.findIndex(c => c.id === classificationId);
+    // Verificar se a classificação existe e se o usuário tem permissão
+    const [classification] = await connection.execute(`
+      SELECT dc.*, d.user_id as diagram_owner
+      FROM diagram_classifications dc
+      JOIN diagrams d ON dc.diagram_id = d.id
+      WHERE dc.id = ? AND dc.is_active = 1
+    `, [classificationId]);
     
-    if (index === -1) {
+    if (classification.length === 0) {
+      await connection.end();
       return res.status(404).json({ error: 'Classificação não encontrada' });
     }
 
-    const deletedClassification = createdClassifications.splice(index, 1)[0];
+    const classData = classification[0];
 
-    console.log('✅ Classificação deletada:', deletedClassification.name);
-    console.log('📋 Total de classificações restantes:', createdClassifications.length);
-    res.json({ message: 'Classificação deletada com sucesso', deletedClassification });
+    // Verificar se não é a classificação padrão
+    if (classData.is_default) {
+      await connection.end();
+      return res.status(400).json({ error: 'Não é possível deletar a classificação padrão' });
+    }
+
+    // Verificar permissão (admin ou dono do diagrama)
+    if (req.user.role !== 'admin' && req.user.userId !== classData.diagram_owner) {
+      const [access] = await connection.execute(`
+        SELECT access_level FROM diagram_access 
+        WHERE diagram_id = ? AND user_email = ? AND is_active = 1
+      `, [classData.diagram_id, req.user.email]);
+      
+      if (access.length === 0 || !['edit', 'admin'].includes(access[0].access_level)) {
+        await connection.end();
+        return res.status(403).json({ error: 'Permissão insuficiente para deletar classificação' });
+      }
+    }
+
+    // Buscar a classificação padrão do diagrama para mover as tabelas
+    const [defaultClass] = await connection.execute(`
+      SELECT id FROM diagram_classifications 
+      WHERE diagram_id = ? AND is_default = TRUE AND is_active = 1
+    `, [classData.diagram_id]);
+
+    if (defaultClass.length > 0) {
+      // Mover todas as tabelas desta classificação para a padrão
+      await connection.execute(`
+        UPDATE table_classifications 
+        SET classification_id = ?, assigned_at = CURRENT_TIMESTAMP
+        WHERE classification_id = ? AND is_active = 1
+      `, [defaultClass[0].id, classificationId]);
+    }
+
+    // Marcar classificação como inativa (soft delete)
+    await connection.execute(`
+      UPDATE diagram_classifications 
+      SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `, [classificationId]);
+
+    // Desativar todas as permissões desta classificação
+    await connection.execute(`
+      UPDATE classification_permissions 
+      SET is_active = FALSE
+      WHERE classification_id = ?
+    `, [classificationId]);
+
+    await connection.end();
+
+    console.log('✅ Classificação deletada:', classData.name);
+    res.json({ 
+      success: true,
+      message: 'Classificação deletada com sucesso',
+      deletedClassification: classData
+    });
 
   } catch (error) {
     console.error('❌ Erro ao deletar classificação:', error);
-    res.status(500).json({ error: 'Erro ao deletar classificação' });
+    res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 
-// 🔑 Rota simplificada para permissões de classificação
+// 🔑 Rota para permissões de classificação (FUNCIONANDO COM BD)
 app.get('/api/classifications/:id/permissions', authenticateToken, async (req, res) => {
   try {
-    console.log('🔑 Acessando permissões da classificação:', req.params.id);
+    const classificationId = parseInt(req.params.id);
+    console.log('🔑 Buscando permissões da classificação:', classificationId);
     
-    // Retornar permissões padrão
+    const connection = await connectDB();
+    
+    // Verificar se a classificação existe e se o usuário tem acesso
+    const [classification] = await connection.execute(`
+      SELECT dc.*, d.user_id as diagram_owner
+      FROM diagram_classifications dc
+      JOIN diagrams d ON dc.diagram_id = d.id
+      WHERE dc.id = ? AND dc.is_active = 1
+    `, [classificationId]);
+    
+    if (classification.length === 0) {
+      await connection.end();
+      return res.status(404).json({ error: 'Classificação não encontrada' });
+    }
+
+    // Buscar permissões da classificação
+    const [permissions] = await connection.execute(`
+      SELECT cp.*, u.name as user_name
+      FROM classification_permissions cp
+      LEFT JOIN users u ON cp.user_email = u.email
+      WHERE cp.classification_id = ? AND cp.is_active = 1
+      ORDER BY cp.granted_at DESC
+    `, [classificationId]);
+
+    await connection.end();
+    
     res.json({
-      classificationId: parseInt(req.params.id),
-      permissions: [
-        { userEmail: 'admin@starttech.com', accessLevel: 'admin', granted: true },
-        { userEmail: 'user@starttech.com', accessLevel: 'view', granted: true }
-      ]
+      success: true,
+      classificationId: classificationId,
+      permissions: permissions
     });
+
   } catch (error) {
     console.error('❌ Erro ao buscar permissões da classificação:', error);
-    res.status(500).json({ error: 'Erro ao buscar permissões' });
+    res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 
-// 🔐 Rota simplificada para acesso de diagrama
+// 🔐 Rota para acesso de diagrama (FUNCIONANDO COM BD)  
 app.get('/api/diagrams/:diagramId/access', authenticateToken, async (req, res) => {
   try {
-    console.log('🔐 Acessando controle de acesso para diagrama:', req.params.diagramId);
+    const { diagramId } = req.params;
+    console.log('🔐 Buscando controle de acesso para diagrama:', diagramId);
     
-    // Retornar acesso padrão para admin
-    if (req.user.role === 'admin') {
+    const connection = await connectDB();
+    
+    // Verificar se o diagrama existe
+    const [diagram] = await connection.execute(`
+      SELECT d.*, u.name as owner_name
+      FROM diagrams d
+      JOIN users u ON d.user_id = u.id
+      WHERE d.id = ? AND d.is_active = 1
+    `, [diagramId]);
+    
+    if (diagram.length === 0) {
+      await connection.end();
+      return res.status(404).json({ error: 'Diagrama não encontrado' });
+    }
+
+    // Verificar se é o dono ou admin
+    const isOwner = req.user.userId === diagram[0].user_id;
+    const isAdmin = req.user.role === 'admin';
+
+    if (isAdmin || isOwner) {
+      // Buscar lista de acessos concedidos
+      const [accessList] = await connection.execute(`
+        SELECT da.*, u.name as user_name
+        FROM diagram_access da
+        LEFT JOIN users u ON da.user_email = u.email
+        WHERE da.diagram_id = ? AND da.is_active = 1
+        ORDER BY da.granted_at DESC
+      `, [diagramId]);
+
+      await connection.end();
+      
       res.json({
-        diagramId: req.params.diagramId,
+        success: true,
+        diagramId: diagramId,
         userEmail: req.user.email,
-        accessLevel: 'admin',
+        accessLevel: isAdmin ? 'admin' : 'owner',
         permissions: ['view', 'edit', 'admin'],
-        isOwner: true
+        isOwner: isOwner,
+        accessList: accessList
       });
     } else {
-      res.json({
-        diagramId: req.params.diagramId,
-        userEmail: req.user.email,
-        accessLevel: 'view',
-        permissions: ['view'],
-        isOwner: false
-      });
+      // Verificar se tem acesso concedido
+      const [userAccess] = await connection.execute(`
+        SELECT access_level FROM diagram_access 
+        WHERE diagram_id = ? AND user_email = ? AND is_active = 1
+      `, [diagramId, req.user.email]);
+
+      await connection.end();
+      
+      if (userAccess.length > 0) {
+        res.json({
+          success: true,
+          diagramId: diagramId,
+          userEmail: req.user.email,
+          accessLevel: userAccess[0].access_level,
+          permissions: [userAccess[0].access_level],
+          isOwner: false,
+          accessList: [] // Usuários não-owners não veem a lista completa
+        });
+      } else {
+        res.status(403).json({ error: 'Acesso negado ao diagrama' });
+      }
     }
+
   } catch (error) {
     console.error('❌ Erro ao buscar acesso:', error);
-    res.status(500).json({ error: 'Erro ao buscar acesso' });
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// 🏷️ Rota para atualizar classificação de uma tabela
+app.put('/api/tables/:tableId/classification', authenticateToken, async (req, res) => {
+  try {
+    const { tableId } = req.params;
+    const { classificationId, diagramId } = req.body;
+    
+    console.log('🏷️ Atualizando classificação da tabela:', { tableId, classificationId, diagramId });
+
+    if (!diagramId || !classificationId) {
+      return res.status(400).json({ error: 'diagramId e classificationId são obrigatórios' });
+    }
+
+    const connection = await connectDB();
+    
+    // Verificar permissão no diagrama
+    let hasPermission = false;
+    if (req.user.role === 'admin') {
+      hasPermission = true;
+    } else {
+      const [access] = await connection.execute(`
+        SELECT d.user_id, da.access_level
+        FROM diagrams d
+        LEFT JOIN diagram_access da ON d.id = da.diagram_id AND da.user_email = ? AND da.is_active = 1
+        WHERE d.id = ? AND d.is_active = 1
+      `, [req.user.email, diagramId]);
+      
+      if (access.length > 0) {
+        hasPermission = (access[0].user_id === req.user.userId || 
+                        ['edit', 'admin'].includes(access[0].access_level));
+      }
+    }
+
+    if (!hasPermission) {
+      await connection.end();
+      return res.status(403).json({ error: 'Permissão insuficiente para alterar classificação' });
+    }
+
+    // Verificar se a classificação existe no diagrama
+    const [classification] = await connection.execute(`
+      SELECT id FROM diagram_classifications 
+      WHERE id = ? AND diagram_id = ? AND is_active = 1
+    `, [classificationId, diagramId]);
+    
+    if (classification.length === 0) {
+      await connection.end();
+      return res.status(400).json({ error: 'Classificação não encontrada no diagrama' });
+    }
+
+    // Verificar se já existe uma classificação para esta tabela
+    const [existing] = await connection.execute(`
+      SELECT id FROM table_classifications 
+      WHERE diagram_id = ? AND table_node_id = ? AND is_active = 1
+    `, [diagramId, tableId]);
+
+    if (existing.length > 0) {
+      // Atualizar classificação existente
+      await connection.execute(`
+        UPDATE table_classifications 
+        SET classification_id = ?, assigned_by = ?, assigned_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `, [classificationId, req.user.userId, existing[0].id]);
+    } else {
+      // Criar nova classificação para a tabela
+      await connection.execute(`
+        INSERT INTO table_classifications 
+        (diagram_id, table_node_id, classification_id, assigned_by)
+        VALUES (?, ?, ?, ?)
+      `, [diagramId, tableId, classificationId, req.user.userId]);
+    }
+
+    await connection.end();
+
+    res.json({
+      success: true,
+      message: 'Classificação da tabela atualizada com sucesso'
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao atualizar classificação da tabela:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 
