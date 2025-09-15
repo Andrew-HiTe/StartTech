@@ -20,8 +20,10 @@ export const useAccessControl = (diagramId) => {
     setError(null);
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/diagrams/${diagramId}/my-permissions`, {
+      const token = localStorage.getItem('authToken');
+      console.log('🔐 useAccessControl loadUserPermissions:', { diagramId, hasToken: !!token });
+      
+      const response = await fetch(`http://localhost:3001/api/diagrams/${diagramId}/my-permissions`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -160,8 +162,10 @@ export const useClassifications = (diagramId) => {
     setError(null);
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/diagrams/${diagramId}/classifications`, {
+      const token = localStorage.getItem('authToken');
+      console.log('🔐 useAccessControl loadClassifications:', { diagramId, hasToken: !!token });
+      
+      const response = await fetch(`http://localhost:3001/api/diagrams/${diagramId}/classifications`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

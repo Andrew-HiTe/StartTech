@@ -1,4 +1,22 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import EditClassificationModal from './EditClassificationModal.jsx';
+
+// Função auxiliar para fazer requisições autenticadas
+const apiRequest = async (endpoint, options = {}) => {
+  const token = localStorage.getItem('authToken');
+  const config = {
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }),
+      ...options.headers
+    },
+    ...options
+  };
+
+  const response = await fetch(`http://localhost:3001${endpoint}`, config);
+  return response;
+};
 
 const AccessConfigModal = ({ isOpen, onClose, diagramId, diagramName }) => {
   const [activeTab, setActiveTab] = useState('classifications');
@@ -9,6 +27,23 @@ const AccessConfigModal = ({ isOpen, onClose, diagramId, diagramName }) => {
   const [error, setError] = useState('');
   const [hasEditAccess, setHasEditAccess] = useState(false);
 
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [classificationToEdit, setClassificationToEdit] = useState(null);
+
+  // Controle de overflow do body
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    // Cleanup
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
   // Estados para formulários
   const [newClassification, setNewClassification] = useState({
     name: '',
@@ -16,7 +51,6 @@ const AccessConfigModal = ({ isOpen, onClose, diagramId, diagramName }) => {
     color: '#3B82F6',
     isDefault: false
   });
-  const [editingClassification, setEditingClassification] = useState(null);
   const [newPermission, setNewPermission] = useState({
     classificationId: '',
     userEmail: '',
@@ -38,21 +72,21 @@ const AccessConfigModal = ({ isOpen, onClose, diagramId, diagramName }) => {
   const loadClassifications = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/diagrams/${diagramId}/classifications`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await apiRequest(`/api/diagrams/${diagramId}/classifications`);
 
       if (response.ok) {
         const data = await response.json();
-        setClassifications(data.classifications);
-        setHasEditAccess(data.hasEditAccess);
         
-        // Carregar permissões para cada classificação
-        for (const classification of data.classifications) {
+        if (Array.isArray(data)) {
+          setClassifications(data);
+          setHasEditAccess(true); 
+        } else {
+          setClassifications(data.classifications || []);
+          setHasEditAccess(data.hasEditAccess || false);
+        }
+        
+        const classificationsArray = Array.isArray(data) ? data : (data.classifications || []);
+        for (const classification of classificationsArray) {
           loadClassificationPermissions(classification.id);
         }
       } else {
@@ -66,13 +100,7 @@ const AccessConfigModal = ({ isOpen, onClose, diagramId, diagramName }) => {
 
   const loadClassificationPermissions = async (classificationId) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/classifications/${classificationId}/permissions`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await apiRequest(`/api/classifications/${classificationId}/permissions`);
 
       if (response.ok) {
         const data = await response.json();
@@ -82,19 +110,17 @@ const AccessConfigModal = ({ isOpen, onClose, diagramId, diagramName }) => {
         }));
       }
     } catch (err) {
-      console.error('Erro ao carregar permissões:', err);
+      console.log('Permissões não disponíveis para classificação:', classificationId);
+      setPermissions(prev => ({
+        ...prev,
+        [classificationId]: []
+      }));
     }
   };
 
   const loadDiagramAccess = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/diagrams/${diagramId}/access`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await apiRequest(`/api/diagrams/${diagramId}/access`);
 
       if (response.ok) {
         const data = await response.json();
@@ -106,93 +132,109 @@ const AccessConfigModal = ({ isOpen, onClose, diagramId, diagramName }) => {
   };
 
   const createClassification = async () => {
+    console.log('🚀 createClassification chamada');
+    console.log('📝 newClassification:', newClassification);
+    
     if (!newClassification.name.trim()) {
+      console.log('❌ Nome da classificação está vazio');
       setError('Nome da classificação é obrigatório');
       return;
     }
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/diagrams/${diagramId}/classifications`, {
+      console.log('📡 Enviando requisição para criar classificação...');
+      const response = await apiRequest(`/api/diagrams/${diagramId}/classifications`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify(newClassification)
       });
 
+      console.log('📬 Resposta recebida:', response.status);
+
       if (response.ok) {
+        console.log('✅ Classificação criada com sucesso');
         setNewClassification({ name: '', description: '', color: '#3B82F6', isDefault: false });
         loadClassifications();
         setError('');
       } else {
         const data = await response.json();
+        console.log('❌ Erro na resposta:', data);
         setError(data.error || 'Erro ao criar classificação');
       }
     } catch (err) {
+      console.log('❌ Erro de conexão:', err);
       setError('Erro de conexão');
     }
   };
 
-  const updateClassification = async () => {
-    if (!editingClassification.name.trim()) {
+  const updateClassification = async (classificationToUpdate) => {
+    console.log('✏️ updateClassification chamada');
+    console.log('📝 classificationToUpdate:', classificationToUpdate);
+    
+    if (!classificationToUpdate.name.trim()) {
+      console.log('❌ Nome da classificação está vazio');
       setError('Nome da classificação é obrigatório');
       return;
     }
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/classifications/${editingClassification.id}`, {
+      console.log('📡 Enviando requisição para atualizar classificação...');
+      const response = await apiRequest(`/api/classifications/${classificationToUpdate.id}`, {
         method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify({
-          name: editingClassification.name,
-          description: editingClassification.description,
-          color: editingClassification.color,
-          isDefault: editingClassification.isDefault
+          name: classificationToUpdate.name,
+          description: classificationToUpdate.description,
+          color: classificationToUpdate.color,
+          isDefault: classificationToUpdate.isDefault
         })
       });
 
+      console.log('📬 Resposta recebida:', response.status);
+
       if (response.ok) {
-        setEditingClassification(null);
+        console.log('✅ Classificação atualizada com sucesso');
+        setIsEditModalOpen(false);
+        setClassificationToEdit(null);
         loadClassifications();
         setError('');
       } else {
         const data = await response.json();
+        console.log('❌ Erro na resposta:', data);
         setError(data.error || 'Erro ao atualizar classificação');
       }
     } catch (err) {
+      console.log('❌ Erro de conexão:', err);
       setError('Erro de conexão');
     }
   };
 
   const deleteClassification = async (classificationId) => {
+    console.log('🗑️ deleteClassification chamada para ID:', classificationId);
+    
     if (!confirm('Tem certeza que deseja excluir esta classificação? As tabelas serão movidas para a classificação padrão.')) {
+      console.log('❌ Exclusão cancelada pelo usuário');
       return;
     }
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/classifications/${classificationId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+      console.log('📡 Enviando requisição para deletar classificação...');
+      console.log('🔗 Endpoint completo será:', `http://localhost:3001/api/classifications/${classificationId}`);
+      const response = await apiRequest(`/api/classifications/${classificationId}`, {
+        method: 'DELETE'
       });
 
+      console.log('📬 Resposta recebida:', response.status);
+
       if (response.ok) {
+        console.log('✅ Classificação deletada com sucesso');
         loadClassifications();
         setError('');
       } else {
         const data = await response.json();
+        console.log('❌ Erro na resposta:', data);
         setError(data.error || 'Erro ao excluir classificação');
       }
     } catch (err) {
+      console.log('❌ Erro de conexão:', err);
       setError('Erro de conexão');
     }
   };
@@ -204,7 +246,7 @@ const AccessConfigModal = ({ isOpen, onClose, diagramId, diagramName }) => {
     }
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('authToken');
       const response = await fetch(`/api/classifications/${newPermission.classificationId}/permissions`, {
         method: 'POST',
         headers: {
@@ -232,7 +274,7 @@ const AccessConfigModal = ({ isOpen, onClose, diagramId, diagramName }) => {
 
   const removePermission = async (classificationId, userEmail) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('authToken');
       const response = await fetch(`/api/classifications/${classificationId}/permissions/${encodeURIComponent(userEmail)}`, {
         method: 'DELETE',
         headers: {
@@ -260,7 +302,7 @@ const AccessConfigModal = ({ isOpen, onClose, diagramId, diagramName }) => {
     }
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('authToken');
       const response = await fetch(`/api/diagrams/${diagramId}/access`, {
         method: 'POST',
         headers: {
@@ -285,51 +327,79 @@ const AccessConfigModal = ({ isOpen, onClose, diagramId, diagramName }) => {
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
+  const overlayStyle = {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 9999999,
+    padding: '20px'
+  };
+
+  const modalStyle = {
+    backgroundColor: 'white',
+    borderRadius: '12px',
+    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4)',
+    border: '1px solid #e5e7eb',
+    width: '100%',
+    maxWidth: '900px',
+    maxHeight: '90vh',
+    overflow: 'hidden',
+    position: 'relative',
+    transform: 'translateZ(0)'
+  };
+
+  const modalContent = (
+    <div style={overlayStyle} onClick={onClose}>
+      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+        <div className="px-8 py-6 border-b border-gray-200 flex justify-between items-center bg-gradient-to-r from-blue-50 to-indigo-50">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900">Configurar Acesso</h2>
-            <p className="text-sm text-gray-600">Diagrama: {diagramName}</p>
+            <h2 className="text-2xl font-bold text-gray-900">🔐 Configurar Acesso</h2>
+            <p className="text-sm text-gray-600 mt-1">Diagrama: <span className="font-medium">{diagramName}</span></p>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-full"
+            title="Fechar modal"
           >
-            <span className="text-2xl">×</span>
+            <span className="text-3xl">×</span>
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="px-6 py-3 border-b border-gray-200">
-          <div className="flex space-x-4">
+        <div className="px-8 py-4 border-b border-gray-200 bg-gray-50">
+          <div className="flex space-x-2">
             <button
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+              className={`px-6 py-3 text-base font-semibold rounded-lg transition-all duration-200 ${
                 activeTab === 'classifications'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-white'
               }`}
               onClick={() => setActiveTab('classifications')}
             >
               🏷️ Classificações
             </button>
             <button
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+              className={`px-6 py-3 text-base font-semibold rounded-lg transition-all duration-200 ${
                 activeTab === 'permissions'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-white'
               }`}
               onClick={() => setActiveTab('permissions')}
             >
               🔐 Permissões por Classificação
             </button>
             <button
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+              className={`px-6 py-3 text-base font-semibold rounded-lg transition-all duration-200 ${
                 activeTab === 'access'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-white'
               }`}
               onClick={() => setActiveTab('access')}
             >
@@ -339,78 +409,60 @@ const AccessConfigModal = ({ isOpen, onClose, diagramId, diagramName }) => {
         </div>
 
         {/* Content */}
-        <div className="p-6 max-h-[60vh] overflow-y-auto">
+        <div 
+          className="p-8 bg-gray-50 overflow-y-auto"
+          style={{
+            maxHeight: 'calc(90vh - 160px)'
+          }}
+        >
           {error && (
-            <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
-              {error}
+            <div className="mb-6 p-4 bg-red-100 text-red-700 rounded-lg border border-red-200">
+              ⚠️ {error}
             </div>
           )}
 
           {loading && (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              <span className="ml-3 text-gray-600">Carregando...</span>
               <span className="ml-2">Carregando...</span>
             </div>
           )}
 
           {/* Tab: Classificações */}
           {activeTab === 'classifications' && (
-            <div className="space-y-6">
+            <div className="space-y-8">
               {hasEditAccess && (
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="text-lg font-medium mb-3">
-                    {editingClassification ? 'Editar Classificação' : 'Nova Classificação'}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                  <h3 className="text-xl font-semibold mb-4 text-gray-800">
+                    {'➕ Nova Classificação'}
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <input
                       type="text"
                       placeholder="Nome da classificação"
-                      value={editingClassification ? editingClassification.name : newClassification.name}
-                      onChange={(e) => {
-                        if (editingClassification) {
-                          setEditingClassification({...editingClassification, name: e.target.value});
-                        } else {
-                          setNewClassification({...newClassification, name: e.target.value});
-                        }
-                      }}
+                      value={newClassification.name}
+                      onChange={(e) => setNewClassification({ ...newClassification, name: e.target.value })}
                       className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <input
                       type="color"
-                      value={editingClassification ? editingClassification.color : newClassification.color}
-                      onChange={(e) => {
-                        if (editingClassification) {
-                          setEditingClassification({...editingClassification, color: e.target.value});
-                        } else {
-                          setNewClassification({...newClassification, color: e.target.value});
-                        }
-                      }}
+                      value={newClassification.color}
+                      onChange={(e) => setNewClassification({ ...newClassification, color: e.target.value })}
                       className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <input
                       type="text"
                       placeholder="Descrição (opcional)"
-                      value={editingClassification ? editingClassification.description : newClassification.description}
-                      onChange={(e) => {
-                        if (editingClassification) {
-                          setEditingClassification({...editingClassification, description: e.target.value});
-                        } else {
-                          setNewClassification({...newClassification, description: e.target.value});
-                        }
-                      }}
+                      value={newClassification.description}
+                      onChange={(e) => setNewClassification({ ...newClassification, description: e.target.value })}
                       className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <label className="flex items-center space-x-2">
                       <input
                         type="checkbox"
-                        checked={editingClassification ? editingClassification.isDefault : newClassification.isDefault}
-                        onChange={(e) => {
-                          if (editingClassification) {
-                            setEditingClassification({...editingClassification, isDefault: e.target.checked});
-                          } else {
-                            setNewClassification({...newClassification, isDefault: e.target.checked});
-                          }
-                        }}
+                        checked={newClassification.isDefault}
+                        onChange={(e) => setNewClassification({ ...newClassification, isDefault: e.target.checked })}
                         className="rounded"
                       />
                       <span className="text-sm">Classificação padrão</span>
@@ -418,68 +470,67 @@ const AccessConfigModal = ({ isOpen, onClose, diagramId, diagramName }) => {
                   </div>
                   <div className="mt-4 flex space-x-2">
                     <button
-                      onClick={editingClassification ? updateClassification : createClassification}
+                      onClick={createClassification}
                       className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                     >
-                      {editingClassification ? 'Atualizar' : 'Criar'}
+                      {'Criar'}
                     </button>
-                    {editingClassification && (
-                      <button
-                        onClick={() => setEditingClassification(null)}
-                        className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors"
-                      >
-                        Cancelar
-                      </button>
-                    )}
                   </div>
                 </div>
               )}
 
-              <div>
-                <h3 className="text-lg font-medium mb-3">Classificações Existentes</h3>
-                <div className="space-y-2">
-                  {classifications.map((classification) => (
+              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                <h3 className="text-xl font-semibold mb-6 text-gray-800">📋 Classificações Existentes</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {classifications?.map((classification) => (
                     <div
                       key={classification.id}
-                      className="flex items-center justify-between p-3 border border-gray-200 rounded-lg"
+                      className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-all duration-200 bg-gray-50 hover:bg-white"
                     >
-                      <div className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-3 mb-3">
                         <div
-                          className="w-4 h-4 rounded"
+                          className="w-6 h-6 rounded-full shadow-sm"
                           style={{ backgroundColor: classification.color }}
                         ></div>
-                        <div>
-                          <span className="font-medium">{classification.name}</span>
-                          {classification.is_default && (
-                            <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-                              Padrão
-                            </span>
-                          )}
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-900">{classification.name}</h4>
                           {classification.description && (
-                            <p className="text-sm text-gray-600">{classification.description}</p>
+                            <p className="text-sm text-gray-600 mt-1">{classification.description}</p>
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2 text-sm text-gray-500">
-                        <span>{classification.users_with_permission} usuários</span>
-                        <span>•</span>
-                        <span>{classification.tables_with_classification} tabelas</span>
+                      
+                      <div className="flex items-center justify-between mt-3">
+                        <div className="flex items-center space-x-2">
+                          {classification.isDefault && (
+                            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">
+                              ⭐ Padrão
+                            </span>
+                          )}
+                        </div>
+                        
                         {hasEditAccess && (
-                          <div className="flex space-x-1 ml-4">
+                          <div className="flex space-x-2">
                             <button
-                              onClick={() => setEditingClassification(classification)}
-                              className="text-blue-600 hover:text-blue-800"
+                              onClick={() => {
+                                console.log('🖱️ Botão editar clicado para classificação:', classification);
+                                setClassificationToEdit(classification);
+                                setIsEditModalOpen(true);
+                              }}
+                              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                             >
-                              ✏️
+                              ✏️ Editar
                             </button>
-                            {!classification.is_default && (
-                              <button
-                                onClick={() => deleteClassification(classification.id)}
-                                className="text-red-600 hover:text-red-800"
-                              >
-                                🗑️
-                              </button>
-                            )}
+                            <button
+                              onClick={() => {
+                                console.log('🖱️ Botão deletar clicado para classificação ID:', classification.id);
+                                console.log('📋 Classificação completa:', classification);
+                                deleteClassification(classification.id);
+                              }}
+                              className="text-red-600 hover:text-red-800 text-sm font-medium"
+                            >
+                              🗑️ Excluir
+                            </button>
                           </div>
                         )}
                       </div>
@@ -503,7 +554,7 @@ const AccessConfigModal = ({ isOpen, onClose, diagramId, diagramName }) => {
                       className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">Selecione uma classificação</option>
-                      {classifications.map((classification) => (
+                      {classifications?.map((classification) => (
                         <option key={classification.id} value={classification.id}>
                           {classification.name}
                         </option>
@@ -538,7 +589,7 @@ const AccessConfigModal = ({ isOpen, onClose, diagramId, diagramName }) => {
               )}
 
               <div className="space-y-4">
-                {classifications.map((classification) => (
+                {classifications?.map((classification) => (
                   <div key={classification.id} className="border border-gray-200 rounded-lg p-4">
                     <div className="flex items-center space-x-3 mb-3">
                       <div
@@ -621,7 +672,7 @@ const AccessConfigModal = ({ isOpen, onClose, diagramId, diagramName }) => {
               <div>
                 <h3 className="text-lg font-medium mb-3">Usuários com Acesso</h3>
                 <div className="space-y-2">
-                  {diagramAccess.map((access) => (
+                  {diagramAccess?.map((access) => (
                     <div
                       key={access.user_email}
                       className="flex items-center justify-between p-3 border border-gray-200 rounded-lg"
@@ -660,16 +711,32 @@ const AccessConfigModal = ({ isOpen, onClose, diagramId, diagramName }) => {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-200 flex justify-end">
+        <div className="px-8 py-6 border-t border-gray-200 bg-gray-50 flex justify-between items-center">
+          <div className="text-sm text-gray-600">
+            💡 Configure classificações e permissões para controlar o acesso aos dados do diagrama
+          </div>
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors"
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 font-medium shadow-sm"
           >
-            Fechar
+            ✅ Concluído
           </button>
         </div>
       </div>
     </div>
+  );
+
+  return createPortal(
+    <>
+      {modalContent}
+      <EditClassificationModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        classification={classificationToEdit}
+        onSave={updateClassification}
+      />
+    </>,
+    document.body
   );
 };
 

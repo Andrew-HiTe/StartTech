@@ -63,8 +63,9 @@ function DiagramFlow({ isSidebarMinimized, setIsSidebarMinimized }) {
     hasAccess
   } = useDiagramStore();
 
-  // Debug: mostrar currentTool
+  // Debug: mostrar currentTool e hasAccess
   console.log('🔧 Current tool:', currentTool);
+  console.log('🔐 HasAccess:', hasAccess, 'Current diagram ID:', currentDiagramId);
 
   // Função integrada para atualizar nome do diagrama
   const handleDiagramNameChange = useCallback((name) => {

@@ -81,7 +81,7 @@ export const AuthProvider = ({ children }) => {
 
   // Função para verificar se é admin
   const isAdmin = () => {
-    return user?.email?.includes('admin') || false;
+    return user?.role === 'admin';
   };
 
   const value = {

@@ -684,13 +684,28 @@ export const useDiagramStore = create((set, get) => ({
     if (!diagramId) return;
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/diagrams/${diagramId}/my-permissions`, {
+      const token = localStorage.getItem('authToken');
+      console.log('🔐 loadUserPermissions chamado:', { diagramId, hasToken: !!token });
+      
+      if (!token) {
+        console.error('❌ Token não encontrado no localStorage');
+        set({
+          userPermissions: {},
+          visibleTables: new Set(),
+          isOwner: false,
+          hasAccess: false
+        });
+        return { success: false, error: 'Token não encontrado' };
+      }
+
+      const response = await fetch(`http://localhost:3001/api/diagrams/${diagramId}/my-permissions`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
+
+      console.log('🔐 Resposta da API my-permissions:', { status: response.status, ok: response.ok });
 
       if (response.ok) {
         const data = await response.json();
@@ -781,8 +796,8 @@ export const useDiagramStore = create((set, get) => ({
     }
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/diagrams/${state.currentDiagramId}/tables/${tableNodeId}/classification`, {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`http://localhost:3001/api/diagrams/${state.currentDiagramId}/tables/${tableNodeId}/classification`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
