@@ -21,11 +21,21 @@ async function setupDatabase() {
     console.log('🔗 Conectado ao MySQL');
 
     // Criar database
-    await connection.execute(`CREATE DATABASE IF NOT EXISTS ${process.env.DB_NAME || 'starttech_db'}`);
+    await connection.query(`CREATE DATABASE IF NOT EXISTS ${process.env.DB_NAME || 'starttech_db'}`);
     console.log('✅ Database criado/verificado');
 
-    // Usar database
-    await connection.execute(`USE ${process.env.DB_NAME || 'starttech_db'}`);
+    // Fechar conexão atual e reconectar com o database
+    await connection.end();
+    
+    const dbConfig = {
+      host: process.env.DB_HOST || 'localhost',
+      user: process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_NAME || 'starttech_db',
+      port: process.env.DB_PORT || 3306
+    };
+    
+    connection = await mysql.createConnection(dbConfig);
 
     // Criar tabela de usuários
     await connection.execute(`

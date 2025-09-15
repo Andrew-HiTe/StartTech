@@ -33,6 +33,51 @@ export const useDiagramStore = create((set, get) => ({
   availableDiagrams: [],
   autoSaveEnabled: true,
 
+  // Access Control state
+  userPermissions: {},
+  visibleTables: new Set(),
+  isOwner: false,
+  hasAccess: true, // Por padrão, assume que tem acesso (será validado)
+
+  // Getters que aplicam filtros de acesso
+  getVisibleNodes: () => {
+    const state = get();
+    
+    // Se é dono ou não há controle de acesso, mostrar tudo
+    if (state.isOwner || !state.currentDiagramId) {
+      return state.nodes;
+    }
+
+    // Se não tem acesso ao diagrama, não mostrar nada
+    if (!state.hasAccess) {
+      return [];
+    }
+
+    // Filtrar nós baseado nas permissões
+    return state.nodes.filter(node => {
+      // Se não tem classificação, mostrar (classificação padrão)
+      if (!node.data.classificationId) {
+        return true;
+      }
+
+      // Verificar permissão específica para a classificação
+      const permission = state.userPermissions[node.data.classificationId];
+      return permission && ['view', 'edit', 'admin'].includes(permission);
+    });
+  },
+
+  getVisibleEdges: () => {
+    const state = get();
+    const visibleNodes = state.getVisibleNodes();
+    const visibleNodeIds = visibleNodes.map(n => n.id);
+
+    // Filtrar arestas que conectam apenas nós visíveis
+    return state.edges.filter(edge => 
+      visibleNodeIds.includes(edge.source) && 
+      visibleNodeIds.includes(edge.target)
+    );
+  },
+
   // Actions
   setNodes: (nodes) => set({ nodes, isDirty: true }),
   setEdges: (edges) => set({ edges, isDirty: true }),
@@ -494,6 +539,10 @@ export const useDiagramStore = create((set, get) => ({
           isLoading: false,
           selectedElements: []
         });
+        
+        // Carregar permissões do usuário para este diagrama
+        await get().loadUserPermissions(id);
+        
         console.log(`✅ Diagrama "${name}" carregado com sucesso`);
         return { success: true, diagram: result.diagram };
       } else {
@@ -624,5 +673,150 @@ export const useDiagramStore = create((set, get) => ({
   // Toggle auto-save
   toggleAutoSave: () => {
     set((state) => ({ autoSaveEnabled: !state.autoSaveEnabled }));
+  },
+
+  // ====================================================
+  // FUNÇÕES DE CONTROLE DE ACESSO
+  // ====================================================
+
+  // Carregar permissões do usuário para o diagrama atual
+  loadUserPermissions: async (diagramId) => {
+    if (!diagramId) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/diagrams/${diagramId}/my-permissions`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        set({
+          userPermissions: data.permissions || {},
+          visibleTables: new Set(data.visibleTables || []),
+          isOwner: data.isOwner || false,
+          hasAccess: data.hasAccess || false
+        });
+        console.log('✅ Permissões do usuário carregadas:', data);
+        return { success: true, data };
+      } else {
+        const errorData = await response.json();
+        console.error('❌ Erro ao carregar permissões:', errorData.error);
+        set({
+          userPermissions: {},
+          visibleTables: new Set(),
+          isOwner: false,
+          hasAccess: false
+        });
+        return { success: false, error: errorData.error };
+      }
+    } catch (error) {
+      console.error('❌ Erro de conexão ao carregar permissões:', error);
+      set({
+        userPermissions: {},
+        visibleTables: new Set(),
+        isOwner: false,
+        hasAccess: false
+      });
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Verificar se usuário pode ver uma tabela específica
+  canViewTable: (tableNodeId, classificationId) => {
+    const state = get();
+    
+    // Se é dono do diagrama, pode ver tudo
+    if (state.isOwner) return true;
+
+    // Se não tem acesso ao diagrama, não pode ver nada
+    if (!state.hasAccess) return false;
+
+    // Se a tabela está na lista de visíveis explicitamente
+    if (state.visibleTables.has(tableNodeId)) return true;
+
+    // Verificar permissão por classificação
+    if (classificationId && state.userPermissions[classificationId]) {
+      return ['view', 'edit', 'admin'].includes(state.userPermissions[classificationId]);
+    }
+
+    // Se não tem classificação específica, verificar se tem acesso básico
+    return state.hasAccess;
+  },
+
+  // Verificar se usuário pode editar uma tabela
+  canEditTable: (tableNodeId, classificationId) => {
+    const state = get();
+    
+    // Se é dono do diagrama, pode editar tudo
+    if (state.isOwner) return true;
+
+    // Se não tem acesso ao diagrama, não pode editar nada
+    if (!state.hasAccess) return false;
+
+    // Verificar permissão de edição por classificação
+    if (classificationId && state.userPermissions[classificationId]) {
+      return ['edit', 'admin'].includes(state.userPermissions[classificationId]);
+    }
+
+    return false;
+  },
+
+  // Verificar se usuário pode administrar (configurar classificações)
+  canAdminister: () => {
+    const state = get();
+    return state.isOwner; // Apenas donos podem administrar por enquanto
+  },
+
+  // Atualizar classificação de uma tabela
+  updateTableClassification: async (tableNodeId, classificationId) => {
+    const state = get();
+    
+    if (!state.currentDiagramId) {
+      console.error('❌ Não há diagrama carregado');
+      return { success: false, error: 'Não há diagrama carregado' };
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/diagrams/${state.currentDiagramId}/tables/${tableNodeId}/classification`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ classificationId })
+      });
+
+      if (response.ok) {
+        // Atualizar o nó no store com a nova classificação
+        const updatedNodes = state.nodes.map(node => {
+          if (node.id === tableNodeId) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                classificationId: classificationId
+              }
+            };
+          }
+          return node;
+        });
+
+        set({ nodes: updatedNodes, isDirty: true });
+        console.log('✅ Classificação da tabela atualizada');
+        return { success: true };
+      } else {
+        const errorData = await response.json();
+        console.error('❌ Erro ao atualizar classificação:', errorData.error);
+        return { success: false, error: errorData.error };
+      }
+    } catch (error) {
+      console.error('❌ Erro de conexão ao atualizar classificação:', error);
+      return { success: false, error: error.message };
+    }
   }
 }));

@@ -57,7 +57,10 @@ function DiagramFlow({ isSidebarMinimized, setIsSidebarMinimized }) {
     addNodeWithSize,
     setSelectedElements,
     setCurrentTool,
-    setDiagramName
+    setDiagramName,
+    getVisibleNodes,
+    getVisibleEdges,
+    hasAccess
   } = useDiagramStore();
 
   // Debug: mostrar currentTool
@@ -449,10 +452,29 @@ function DiagramFlow({ isSidebarMinimized, setIsSidebarMinimized }) {
     return currentTool === 'select';
   }, [currentTool]);
 
-  // Combinar nós com preview
+  // Combinar nós com preview, aplicando filtros de acesso
   const allNodes = useMemo(() => {
-    return previewNode ? [...nodes, previewNode] : nodes;
-  }, [nodes, previewNode]);
+    const visibleNodes = getVisibleNodes();
+    return previewNode ? [...visibleNodes, previewNode] : visibleNodes;
+  }, [getVisibleNodes, previewNode]);
+
+  // Obter arestas visíveis
+  const visibleEdges = useMemo(() => {
+    return getVisibleEdges();
+  }, [getVisibleEdges]);
+
+  // Verificar se usuário tem acesso ao diagrama
+  if (!hasAccess) {
+    return (
+      <div className="w-full h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4">🔒</div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Acesso Negado</h2>
+          <p className="text-gray-600">Você não tem permissão para visualizar este diagrama.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-screen flex">
@@ -474,7 +496,7 @@ function DiagramFlow({ isSidebarMinimized, setIsSidebarMinimized }) {
         <div className="flex-1 relative w-full h-full">
           <ReactFlow
               nodes={allNodes}
-              edges={edges}
+              edges={visibleEdges}
               nodeTypes={nodeTypes}
               onNodesChange={handleNodesChange}
               onEdgesChange={handleEdgesChange}

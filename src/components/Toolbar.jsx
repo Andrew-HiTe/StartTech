@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useDiagramStore } from '../stores/diagramStore.js';
+import AccessConfigModal from './AccessConfigModal.jsx';
 
 export const Toolbar = () => {
   const { 
@@ -22,6 +23,9 @@ export const Toolbar = () => {
   // Estado para feedback visual do auto-save
   const [saveStatus, setSaveStatus] = useState('saved'); // 'saved', 'saving', 'dirty'
   const [autoSaveTimer, setAutoSaveTimer] = useState(null);
+  
+  // Estado para modal de configuração de acesso
+  const [showAccessConfig, setShowAccessConfig] = useState(false);
 
   console.log('🔧 Toolbar renderizado, currentTool:', currentTool);
 
@@ -204,6 +208,17 @@ export const Toolbar = () => {
           📄 Exportar JSON
         </button>
 
+        {/* Novo botão de Configurar Acesso */}
+        {currentDiagramId && (
+          <button
+            className="px-3 py-1.5 rounded-md text-sm font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
+            onClick={() => setShowAccessConfig(true)}
+            title="Configurar classificações e permissões de acesso"
+          >
+            🔐 Configurar Acesso
+          </button>
+        )}
+
         {/* Info icon with hover instructions - moved to last position */}
         <div className="relative group">
           <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center cursor-help">
@@ -243,6 +258,14 @@ export const Toolbar = () => {
           </div>
         </div>
       </div>
+      
+      {/* Modal de Configuração de Acesso */}
+      <AccessConfigModal
+        isOpen={showAccessConfig}
+        onClose={() => setShowAccessConfig(false)}
+        diagramId={currentDiagramId}
+        diagramName={diagramName}
+      />
     </div>
   );
 };

@@ -8,7 +8,8 @@ const mysql = require('mysql2/promise');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -25,6 +26,14 @@ const dbConfig = {
   database: process.env.DB_NAME || 'starttech_db',
   port: process.env.DB_PORT || 3306
 };
+
+console.log('🔧 Configuração do banco:', {
+  host: dbConfig.host,
+  user: dbConfig.user,
+  database: dbConfig.database,
+  port: dbConfig.port,
+  hasPassword: !!dbConfig.password
+});
 
 // Função para conectar ao banco
 async function connectDB() {
@@ -218,13 +227,36 @@ app.delete('/api/diagrams/:id', authenticateToken, async (req, res) => {
 app.get('/api/diagrams', authenticateToken, async (req, res) => {
   try {
     const connection = await connectDB();
-    const [rows] = await connection.execute(
-      `SELECT id, name, created_at, updated_at, version
-       FROM diagrams 
-       WHERE user_id = ? AND is_active = 1 
-       ORDER BY updated_at DESC`,
-      [req.user.userId]
-    );
+    
+    let query, params;
+    
+    // Admin pode ver todos os diagramas
+    if (req.user.role === 'admin') {
+      query = `SELECT d.id, d.name, d.created_at, d.updated_at, d.version, d.user_id,
+                      u.name as owner_name, u.email as owner_email
+               FROM diagrams d
+               JOIN users u ON d.user_id = u.id
+               WHERE d.is_active = 1 
+               ORDER BY d.updated_at DESC`;
+      params = [];
+    } else {
+      // Usuários normais veem apenas seus diagramas + diagramas compartilhados
+      query = `SELECT DISTINCT d.id, d.name, d.created_at, d.updated_at, d.version, d.user_id,
+                      u.name as owner_name, u.email as owner_email,
+                      CASE 
+                        WHEN d.user_id = ? THEN 'owner'
+                        ELSE COALESCE(da.access_level, 'view')
+                      END as access_level
+               FROM diagrams d
+               JOIN users u ON d.user_id = u.id
+               LEFT JOIN diagram_access da ON d.id = da.diagram_id AND da.user_email = ? AND da.is_active = 1
+               WHERE d.is_active = 1 
+               AND (d.user_id = ? OR da.user_email = ?)
+               ORDER BY d.updated_at DESC`;
+      params = [req.user.userId, req.user.email, req.user.userId, req.user.email];
+    }
+    
+    const [rows] = await connection.execute(query, params);
     await connection.end();
 
     res.json({
@@ -244,16 +276,37 @@ app.get('/api/diagrams', authenticateToken, async (req, res) => {
 app.get('/api/diagrams/:id', authenticateToken, async (req, res) => {
   try {
     const connection = await connectDB();
-    const [rows] = await connection.execute(
-      `SELECT * FROM diagrams 
-       WHERE id = ? AND user_id = ? AND is_active = 1`,
-      [req.params.id, req.user.userId]
-    );
+    
+    let query, params;
+    
+    // Admin pode acessar qualquer diagrama
+    if (req.user.role === 'admin') {
+      query = `SELECT d.*, u.name as owner_name, u.email as owner_email
+               FROM diagrams d
+               JOIN users u ON d.user_id = u.id
+               WHERE d.id = ? AND d.is_active = 1`;
+      params = [req.params.id];
+    } else {
+      // Usuários normais: próprios diagramas + diagramas compartilhados
+      query = `SELECT d.*, u.name as owner_name, u.email as owner_email,
+                      CASE 
+                        WHEN d.user_id = ? THEN 'owner'
+                        ELSE COALESCE(da.access_level, NULL)
+                      END as access_level
+               FROM diagrams d
+               JOIN users u ON d.user_id = u.id
+               LEFT JOIN diagram_access da ON d.id = da.diagram_id AND da.user_email = ? AND da.is_active = 1
+               WHERE d.id = ? AND d.is_active = 1
+               AND (d.user_id = ? OR da.user_email = ?)`;
+      params = [req.user.userId, req.user.email, req.params.id, req.user.userId, req.user.email];
+    }
+    
+    const [rows] = await connection.execute(query, params);
     await connection.end();
 
     if (rows.length === 0) {
       return res.status(404).json({
-        error: 'Diagrama não encontrado'
+        error: 'Diagrama não encontrado ou acesso negado'
       });
     }
 
@@ -278,6 +331,7 @@ app.get('/api/diagrams/:id', authenticateToken, async (req, res) => {
       if (!diagram.data.edges) diagram.data.edges = [];
       
       console.log('📊 Diagrama carregado:', diagram.name, 'com', diagram.data.nodes.length, 'nós');
+      console.log('👤 Acesso por:', req.user.email, '| Role:', req.user.role);
       
     } catch (e) {
       console.error('❌ Erro ao fazer parse do JSON para diagrama', diagram.id, ':', e);
@@ -449,11 +503,250 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+// ====================================================
+// IMPORTAR E REGISTRAR ROTAS DE CONTROLE DE ACESSO
+// ====================================================
+
+// Carregar rotas no contexto atual (mesmo arquivo)
+// As rotas usam o 'app' já definido, então incluímos o código diretamente
+
+// ====================================================
+// CLASSIFICAÇÕES POR DIAGRAMA
+// ====================================================
+
+// 📋 Listar classificações de um diagrama
+app.get('/api/diagrams/:diagramId/classifications', authenticateToken, async (req, res) => {
+  try {
+    const { diagramId } = req.params;
+    const connection = await connectDB();
+    
+    // Verificar se o usuário tem acesso ao diagrama
+    let query, params;
+    
+    // Admin pode acessar qualquer diagrama
+    if (req.user.role === 'admin') {
+      query = `SELECT d.id, d.user_id, 'owner' as access_level
+               FROM diagrams d
+               WHERE d.id = ? AND d.is_active = 1`;
+      params = [diagramId];
+    } else {
+      query = `SELECT d.id, d.user_id, da.access_level
+               FROM diagrams d
+               LEFT JOIN diagram_access da ON d.id = da.diagram_id AND da.user_email = ?
+               WHERE d.id = ? AND d.is_active = 1
+               AND (d.user_id = ? OR da.is_active = 1)`;
+      params = [req.user.email, diagramId, req.user.userId];
+    }
+    
+    const [accessCheck] = await connection.execute(query, params);
+
+    if (accessCheck.length === 0) {
+      await connection.end();
+      return res.status(403).json({ error: 'Acesso negado ao diagrama' });
+    }
+
+    // Buscar classificações do diagrama
+    const [classifications] = await connection.execute(`
+      SELECT 
+        dc.*,
+        u.name as created_by_name,
+        COUNT(cp.id) as users_with_permission,
+        COUNT(tc.id) as tables_with_classification
+      FROM diagram_classifications dc
+      LEFT JOIN users u ON dc.created_by = u.id
+      LEFT JOIN classification_permissions cp ON dc.id = cp.classification_id AND cp.is_active = 1
+      LEFT JOIN table_classifications tc ON dc.id = tc.classification_id AND tc.is_active = 1
+      WHERE dc.diagram_id = ? AND dc.is_active = 1
+      GROUP BY dc.id
+      ORDER BY dc.display_order, dc.name
+    `, [diagramId]);
+
+    await connection.end();
+
+    res.json({
+      success: true,
+      classifications,
+      hasEditAccess: req.user.role === 'admin' || 
+                     accessCheck[0].user_id === req.user.userId || 
+                     ['edit', 'admin'].includes(accessCheck[0].access_level)
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao buscar classificações:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// ➕ Criar nova classificação
+app.post('/api/diagrams/:diagramId/classifications', authenticateToken, async (req, res) => {
+  try {
+    const { diagramId } = req.params;
+    const { name, description, color, isDefault } = req.body;
+    
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Nome da classificação é obrigatório' });
+    }
+
+    const connection = await connectDB();
+    
+    // Verificar permissão de edição
+    const [accessCheck] = await connection.execute(`
+      SELECT d.user_id, da.access_level
+      FROM diagrams d
+      LEFT JOIN diagram_access da ON d.id = da.diagram_id AND da.user_email = ?
+      WHERE d.id = ? AND d.is_active = 1
+    `, [req.user.email, diagramId]);
+
+    if (accessCheck.length === 0 || 
+        (accessCheck[0].user_id !== req.user.userId && 
+         !['edit', 'admin'].includes(accessCheck[0].access_level))) {
+      await connection.end();
+      return res.status(403).json({ error: 'Permissão insuficiente para criar classificação' });
+    }
+
+    // Se esta será a classificação padrão, remover flag das outras
+    if (isDefault) {
+      await connection.execute(`
+        UPDATE diagram_classifications 
+        SET is_default = FALSE 
+        WHERE diagram_id = ?
+      `, [diagramId]);
+    }
+
+    // Inserir nova classificação
+    const [result] = await connection.execute(`
+      INSERT INTO diagram_classifications 
+      (diagram_id, name, description, color, is_default, created_by)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `, [diagramId, name.trim(), description || '', color || '#3B82F6', isDefault || false, req.user.userId]);
+
+    await connection.end();
+
+    res.json({
+      success: true,
+      classificationId: result.insertId,
+      message: 'Classificação criada com sucesso'
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao criar classificação:', error);
+    if (error.code === 'ER_DUP_ENTRY') {
+      res.status(400).json({ error: 'Já existe uma classificação com este nome neste diagrama' });
+    } else {
+      res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+  }
+});
+
+// 🔍 Verificar permissões efetivas do usuário  
+app.get('/api/diagrams/:diagramId/my-permissions', authenticateToken, async (req, res) => {
+  try {
+    const { diagramId } = req.params;
+    const connection = await connectDB();
+    
+    // Admin tem acesso total a tudo
+    if (req.user.role === 'admin') {
+      await connection.end();
+      return res.json({
+        success: true,
+        isOwner: true,
+        hasAccess: true,
+        permissions: {}, // Admin pode ver tudo
+        visibleTables: [], // Lista vazia = pode ver tudo
+        userRole: 'admin'
+      });
+    }
+    
+    // Verificar se é dono do diagrama
+    const [ownerCheck] = await connection.execute(`
+      SELECT user_id FROM diagrams 
+      WHERE id = ? AND user_id = ? AND is_active = 1
+    `, [diagramId, req.user.userId]);
+
+    const isOwner = ownerCheck.length > 0;
+
+    // Se é dono, tem acesso total
+    if (isOwner) {
+      await connection.end();
+      return res.json({
+        success: true,
+        isOwner: true,
+        hasAccess: true,
+        permissions: {},
+        visibleTables: [],
+        userRole: req.user.role
+      });
+    }
+
+    // Verificar acesso ao diagrama
+    const [accessCheck] = await connection.execute(`
+      SELECT access_level FROM diagram_access
+      WHERE diagram_id = ? AND user_email = ? AND is_active = 1
+      AND (expires_at IS NULL OR expires_at > NOW())
+    `, [diagramId, req.user.email]);
+
+    if (accessCheck.length === 0) {
+      await connection.end();
+      return res.json({
+        success: true,
+        isOwner: false,
+        hasAccess: false,
+        permissions: {},
+        visibleTables: [],
+        userRole: req.user.role
+      });
+    }
+
+    // Buscar permissões específicas por classificação
+    const [permissions] = await connection.execute(`
+      SELECT 
+        dc.id as classification_id,
+        COALESCE(cp.permission_type, 
+          CASE 
+            WHEN ? = 'admin' THEN 'admin'
+            WHEN ? = 'edit' THEN 'edit'
+            WHEN dc.is_default = TRUE THEN 'view'
+            ELSE NULL
+          END
+        ) as permission_type
+      FROM diagram_classifications dc
+      LEFT JOIN classification_permissions cp ON dc.id = cp.classification_id 
+        AND cp.user_email = ? AND cp.is_active = 1
+        AND (cp.expires_at IS NULL OR cp.expires_at > NOW())
+      WHERE dc.diagram_id = ? AND dc.is_active = 1
+    `, [accessCheck[0].access_level, accessCheck[0].access_level, req.user.email, diagramId]);
+
+    // Montar objeto de permissões
+    const userPermissions = {};
+    permissions.forEach(perm => {
+      if (perm.permission_type) {
+        userPermissions[perm.classification_id] = perm.permission_type;
+      }
+    });
+
+    await connection.end();
+
+    res.json({
+      success: true,
+      isOwner: false,
+      hasAccess: true,
+      permissions: userPermissions,
+      visibleTables: [], // TODO: implementar lista específica se necessário
+      userRole: req.user.role
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao verificar permissões:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
 // Iniciar servidor
 app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
   console.log(`🔗 API disponível em: http://localhost:${PORT}/api`);
   console.log(`🏥 Health check: http://localhost:${PORT}/api/health`);
+  console.log(`🔐 Sistema de controle de acesso ativo`);
 });
 
 module.exports = app;
