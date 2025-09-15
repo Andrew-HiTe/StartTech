@@ -1,0 +1,60 @@
+/* Lista de funcionalidades do T-Draw */
+.funcionalidades-section {
+  padding: 80px 20px 100px 20px; /* Aumentar padding para mais altura */
+  background-color: #f8f9fa;
+  min-height: 80vh; /* Garantir altura mínima */
+}
+
+.funcionalidades-section h2 {
+  text-align: center;
+  font-size: 2.5rem;
+  margin-bottom: 3rem;
+  color: #2c3e50;
+  font-weight: 700;
+}
+
+.funcionalidades-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.funcionalidade-card {
+  padding: 2rem;
+  border-radius: 16px;
+  text-align: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: 4px solid transparent;
+  background:
+    linear-gradient(white, white) padding-box,
+    linear-gradient(
+      90deg,
+      rgba(0, 255, 212, 1) 0%,
+      rgba(164, 77, 255, 1) 50%,
+      rgba(4, 87, 167, 1) 100%) border-box;
+}
+
+.funcionalidade-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 8px rgba(255, 255, 255, 1);
+}
+
+.funcionalidade-icone {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.funcionalidade-card h3 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 1rem;
+}
+
+.funcionalidade-card p {
+  color: #666;
+  line-height: 1.6;
+  font-size: 1rem;
+}

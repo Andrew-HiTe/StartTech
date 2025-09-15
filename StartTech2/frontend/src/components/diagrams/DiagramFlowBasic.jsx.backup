@@ -1,0 +1,603 @@
+import React, { useState, useC// Versão simplificada para debug
+const DiagramFlowBasic = () => {
+  const navigate = useNavigate();
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [diagramName, setDiagramName] = useState('Meu Diagrama');
+  const [isSidebarMinimized, setIsSidebarMinimized] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentDiagramId, setCurrentDiagramId] = useState(null);
+
+  // Função para carregar um diagrama específico
+  const loadDiagramById = async (diagramId) => {
+    try {
+      console.log(`🔧 Carregando diagrama: ${diagramId}`);
+      const response = await fetch(`http://localhost:5000/api/diagrams/${diagramId}/full`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.diagram) {
+          setNodes(data.diagram.nodes || []);
+          setEdges(data.diagram.edges || []);
+          setDiagramName(data.diagram.name || 'Diagrama sem nome');
+          setCurrentDiagramId(diagramId);
+          console.log(`✅ Diagrama carregado: ${data.diagram.name}`);
+          return true;
+        }
+      }
+      return false;
+    } catch (error) {
+      console.error('❌ Erro ao carregar diagrama:', error);
+      return false;
+    }
+  };
+
+  // Listener para mudanças no sessionStorage (quando outro componente seleciona diagrama)
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'activeDiagramId' && e.newValue !== currentDiagramId) {
+        console.log(`🔄 Detectada mudança de diagrama: ${e.newValue}`);
+        loadDiagramById(e.newValue);
+      }
+    };
+
+    // Escutar mudanças no localStorage/sessionStorage
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Verificar mudanças periódicas no sessionStorage (para mesma aba)
+    const checkInterval = setInterval(() => {
+      const storedId = sessionStorage.getItem('activeDiagramId');
+      if (storedId && storedId !== currentDiagramId) {
+        console.log(`🔄 Detectada mudança local de diagrama: ${storedId}`);
+        loadDiagramById(storedId);
+      }
+    }, 1000);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(checkInterval);
+    };
+  }, [currentDiagramId]);
+
+  // Carregar dados salvos quando a página carregaseEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  ReactFlow,
+  Background,
+  Controls,
+  MiniMap,
+  Panel,
+  addEdge,
+  useNodesState,
+  useEdgesState,
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
+import { C4NodeComponent } from './C4Node.jsx';
+import OffsetEdge from './OffsetEdge.jsx';
+import { Sidebar } from './SidebarSimple.jsx';
+import './index.css';
+import './diagrams.css';
+
+const nodeTypes = {
+  c4Node: C4NodeComponent,
+  default: C4NodeComponent,
+};
+
+const edgeTypes = {
+  default: OffsetEdge,
+  straight: OffsetEdge,
+  smoothstep: OffsetEdge,
+};
+
+// Versão simplificada para debug
+const DiagramFlowBasic = () => {
+  const navigate = useNavigate();
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [diagramName, setDiagramName] = useState('Meu Diagrama');
+  const [isSidebarMinimized, setIsSidebarMinimized] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Carregar dados salvos quando a página carrega
+  useEffect(() => {
+    const loadSavedData = async () => {
+      setIsLoading(true);
+      try {
+        // Verificar se já foi feita limpeza nesta sessão
+        const cleanupDone = sessionStorage.getItem('cleanupDone');
+        
+        if (!cleanupDone) {
+          // Fazer limpeza automática de duplicatas apenas uma vez por sessão
+          try {
+            const cleanupResponse = await fetch('http://localhost:5000/api/diagrams/cleanup-duplicates', {
+              method: 'DELETE'
+            });
+            
+            if (cleanupResponse.ok) {
+              console.log('🧹 Limpeza automática de duplicatas concluída');
+              sessionStorage.setItem('cleanupDone', 'true');
+            }
+          } catch (error) {
+            console.log('⚠️ Limpeza ignorada:', error.message);
+          }
+        }
+
+        // Verificar se há um diagrama ativo na sessão
+        let diagramId = sessionStorage.getItem('activeDiagramId');
+        
+        // Se não há diagrama ativo, buscar o mais recente do banco
+        if (!diagramId) {
+          const listResponse = await fetch('http://localhost:5000/api/diagrams/list');
+          if (listResponse.ok) {
+            const listData = await listResponse.json();
+            if (listData.success && listData.diagrams.length > 0) {
+              // Usar o diagrama mais recente
+              const latestDiagram = listData.diagrams[0];
+              diagramId = latestDiagram.id;
+              sessionStorage.setItem('activeDiagramId', diagramId);
+            } else {
+              // Se não há diagrama no banco, criar um novo
+              diagramId = `diagram_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+              sessionStorage.setItem('activeDiagramId', diagramId);
+              console.log(`🆕 Novo diagrama criado: ${diagramId}`);
+            }
+          }
+        }
+
+        // Carregar o diagrama usando a nova função
+        if (diagramId) {
+          const loaded = await loadDiagramById(diagramId);
+          if (!loaded) {
+            // Se falhou ao carregar, criar um novo
+            const newId = `diagram_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            sessionStorage.setItem('activeDiagramId', newId);
+            setCurrentDiagramId(newId);
+            setDiagramName('Novo Diagrama');
+            setNodes([]);
+            setEdges([]);
+          }
+        }
+
+      } catch (error) {
+        console.error('❌ Erro ao carregar dados:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadSavedData();
+  }, []);
+          console.log(`📂 Verificando se diagrama da sessão ainda existe: ${currentDiagramId}`);
+          
+          try {
+            const verifyResponse = await fetch('http://localhost:5000/api/diagrams/list');
+            if (verifyResponse.ok) {
+              const verifyData = await verifyResponse.json();
+              if (verifyData.success) {
+                const diagramExists = verifyData.diagrams.find(d => d.id === currentDiagramId);
+                
+                if (!diagramExists) {
+                  console.log(`❌ Diagrama da sessão não existe mais no banco: ${currentDiagramId}`);
+                  // Limpar sessionStorage e recarregar com diagrama do banco
+                  sessionStorage.removeItem('activeDiagramId');
+                  sessionStorage.removeItem('cleanupDone');
+                  
+                  if (verifyData.diagrams.length > 0) {
+                    // Usar o diagrama mais recente do banco
+                    const latestDiagram = verifyData.diagrams[0];
+                    currentDiagramId = latestDiagram.id;
+                    sessionStorage.setItem('activeDiagramId', currentDiagramId);
+                    
+                    // Carregar dados do diagrama encontrado
+                    const fullResponse = await fetch(`http://localhost:5000/api/diagrams/${currentDiagramId}/full`);
+                    if (fullResponse.ok) {
+                      const fullData = await fullResponse.json();
+                      if (fullData.success && fullData.diagram.nodes.length > 0) {
+                        setDiagramName(fullData.diagram.name);
+                        setNodes(fullData.diagram.nodes);
+                        setEdges(fullData.diagram.edges || []);
+                        console.log(`🔄 Sincronizado com diagrama do banco: ${currentDiagramId}`);
+                        setIsLoading(false);
+                        return;
+                      }
+                    }
+                  } else {
+                    // Não há diagramas no banco, criar um novo
+                    currentDiagramId = `diagram_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    sessionStorage.setItem('activeDiagramId', currentDiagramId);
+                    console.log(`🆕 Criado novo diagrama após sincronização: ${currentDiagramId}`);
+                  }
+                } else {
+                  console.log(`✅ Diagrama da sessão confirmado no banco: ${currentDiagramId}`);
+                  
+                  // Carregar dados do diagrama confirmado
+                  const fullResponse = await fetch(`http://localhost:5000/api/diagrams/${currentDiagramId}/full`);
+                  if (fullResponse.ok) {
+                    const fullData = await fullResponse.json();
+                    if (fullData.success && fullData.diagram.nodes.length > 0) {
+                      setDiagramName(fullData.diagram.name);
+                      setNodes(fullData.diagram.nodes);
+                      setEdges(fullData.diagram.edges || []);
+                      console.log(`📊 Carregado diagrama confirmado: ${currentDiagramId}`);
+                      setIsLoading(false);
+                      return;
+                    }
+                  }
+                }
+              }
+            }
+          } catch (verifyError) {
+            console.log('⚠️ Erro ao verificar diagrama da sessão:', verifyError);
+          }
+        }
+
+      } catch (error) {
+        console.log('⚠️ Erro ao carregar dados:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadSavedData();
+  }, []); // Executa apenas uma vez quando o componente monta
+
+  // Verificação periódica de sincronização com o banco
+  useEffect(() => {
+    const syncWithDatabase = async () => {
+      try {
+        const currentDiagramId = sessionStorage.getItem('activeDiagramId');
+        if (!currentDiagramId) return;
+
+        // Verificar se o diagrama ainda existe no banco
+        const listResponse = await fetch('http://localhost:5000/api/diagrams/list');
+        if (listResponse.ok) {
+          const listData = await listResponse.json();
+          if (listData.success) {
+            const diagramExists = listData.diagrams.find(d => d.id === currentDiagramId);
+            
+            if (!diagramExists) {
+              console.log(`🔄 Diagrama ${currentDiagramId} foi removido do banco - sincronizando...`);
+              
+              // Limpar sessionStorage
+              sessionStorage.removeItem('activeDiagramId');
+              sessionStorage.removeItem('cleanupDone');
+              
+              if (listData.diagrams.length > 0) {
+                // Carregar o diagrama mais recente disponível
+                const latestDiagram = listData.diagrams[0];
+                sessionStorage.setItem('activeDiagramId', latestDiagram.id);
+                
+                const fullResponse = await fetch(`http://localhost:5000/api/diagrams/${latestDiagram.id}/full`);
+                if (fullResponse.ok) {
+                  const fullData = await fullResponse.json();
+                  if (fullData.success && fullData.diagram.nodes.length > 0) {
+                    setDiagramName(fullData.diagram.name);
+                    setNodes(fullData.diagram.nodes);
+                    setEdges(fullData.diagram.edges || []);
+                    console.log(`✅ Sincronizado com: ${latestDiagram.name}`);
+                  }
+                }
+              } else {
+                // Não há diagramas, limpar interface
+                setDiagramName('Novo Diagrama');
+                setNodes([]);
+                setEdges([]);
+                console.log(`🆕 Banco vazio - interface limpa`);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.log('⚠️ Erro na sincronização periódica:', error);
+      }
+    };
+
+    // Executar sincronização a cada 10 segundos
+    const interval = setInterval(syncWithDatabase, 10000);
+    
+    // Cleanup do interval quando componente for desmontado
+    return () => clearInterval(interval);
+  }, [setNodes, setEdges, setDiagramName]); // Dependências para atualizar o estado
+
+  // Salvar dados automaticamente quando há mudanças
+  useEffect(() => {
+    const saveData = () => {
+      const diagramData = {
+        nodes,
+        edges,
+        diagramName,
+        timestamp: new Date().toISOString()
+      };
+      localStorage.setItem('currentDiagram', JSON.stringify(diagramData));
+      console.log('Dados salvos no localStorage:', diagramData);
+    };
+
+    // Só salva se há pelo menos um node ou edge
+    if (nodes.length > 0 || edges.length > 0) {
+      saveData();
+    }
+  }, [nodes, edges, diagramName]);
+
+  // Sincronização automática com banco de dados (uma sessão = um diagrama)
+  useEffect(() => {
+    const syncWithDatabase = async () => {
+      // Só sincronizar se há nós para salvar
+      if (nodes.length === 0) return;
+      
+      try {
+        // Usar o diagrama ativo da sessão
+        const diagramId = sessionStorage.getItem('activeDiagramId');
+        if (!diagramId) return;
+        
+        // Verificar se o diagrama já existe no banco
+        const listResponse = await fetch('http://localhost:5000/api/diagrams/list');
+        let diagramExists = false;
+        
+        if (listResponse.ok) {
+          const listData = await listResponse.json();
+          diagramExists = listData.diagrams?.some(d => d.id === diagramId);
+        }
+        
+        // Criar diagrama no banco se não existir
+        if (!diagramExists) {
+          const createResponse = await fetch('http://localhost:5000/api/diagrams/create-table', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              diagramId,
+              diagramName,
+              timestamp: new Date().toISOString()
+            })
+          });
+
+          if (createResponse.ok) {
+            console.log(`📊 Diagrama criado no banco: ${diagramName}`);
+          }
+        }
+        
+        // Sincronizar cada tabela/nó com o banco
+        const tableNodes = nodes.filter(node => node.type === 'c4Node');
+        
+        for (const node of tableNodes) {
+          await fetch('http://localhost:5000/api/diagrams/add-table-item', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              diagramId,
+              nodeId: node.id,
+              nodeName: node.data.label || 'Tabela sem nome',
+              nodeType: 'table',
+              nodeDescription: node.data.description || '',
+              fields: node.data.fields || [],
+              position: node.position,
+              style: node.style,
+              timestamp: new Date().toISOString()
+            })
+          });
+        }
+
+        console.log(`✅ Diagrama sincronizado: ${tableNodes.length} tabelas`);
+
+      } catch (error) {
+        console.log('⚠️ Erro na sincronização:', error.message);
+      }
+    };
+
+    // Debounce para evitar muitas chamadas
+    const timeoutId = setTimeout(syncWithDatabase, 2000);
+    return () => clearTimeout(timeoutId);
+    
+  }, [nodes, diagramName]);
+
+  // Conectar edges
+  const onConnect = useCallback(
+    (connection) => setEdges((eds) => addEdge(connection, eds)),
+    [setEdges]
+  );
+
+  // Função para deletar nós (remove do diagrama e banco)
+  const onNodesDelete = useCallback(async (deletedNodes) => {
+    console.log('🗑️ Deletando nós:', deletedNodes);
+    
+    const diagramId = sessionStorage.getItem('activeDiagramId');
+    if (!diagramId) return;
+    
+    for (const node of deletedNodes) {
+      try {
+        // Remover registro da tabela do diagrama
+        const deleteResponse = await fetch(`http://localhost:5000/api/diagrams/remove-table-item`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            diagramId,
+            nodeId: node.id
+          })
+        });
+        
+        if (deleteResponse.ok) {
+          console.log(`✅ Tabela "${node.data.label}" removida do diagrama`);
+        }
+        
+      } catch (error) {
+        console.log('❌ Erro ao deletar do banco:', error.message);
+      }
+    }
+    
+    console.log('✅ Nós deletados com sucesso');
+  }, []);
+
+  // Adicionar novo nó C4
+  const handleAddNode = useCallback(() => {
+    const tableName = `tabela_${Date.now()}`;
+    const newNode = {
+      id: `table-${Date.now()}`,
+      type: 'c4Node',
+      position: { 
+        x: Math.random() * 400 + 100, 
+        y: Math.random() * 400 + 100 
+      },
+      data: { 
+        label: `Tabela ${nodes.length + 1}`,
+        description: 'Nova tabela',
+        type: 'Table',
+        color: '#ffffff',
+        tableName: tableName,
+        fields: [
+          { name: 'id', type: 'INT AUTO_INCREMENT', isPrimaryKey: true },
+          { name: 'nome', type: 'VARCHAR(255)', isPrimaryKey: false },
+          { name: 'criado_em', type: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP', isPrimaryKey: false }
+        ],
+        isEditing: false
+      }
+    };
+    
+    setNodes(prev => [...prev, newNode]);
+  }, [nodes.length, setNodes]);
+
+  // Limpar diagrama
+  const handleClear = useCallback(() => {
+    setNodes([]);
+    setEdges([]);
+  }, [setNodes, setEdges]);
+
+  // Função de teste para debug
+  const testLocalStorage = useCallback(() => {
+    const savedData = localStorage.getItem('currentDiagram');
+    console.log('Teste localStorage:', savedData);
+    
+    if (savedData) {
+      const data = JSON.parse(savedData);
+      console.log('Dados encontrados:', data);
+      
+      if (data.nodes && data.nodes.length > 0) {
+        console.log('Forçando aplicação dos nodes:', data.nodes);
+        setNodes(data.nodes);
+      }
+    } else {
+      console.log('Nenhum dado encontrado no localStorage');
+    }
+  }, [setNodes]);
+
+  // Exportar JSON
+  const handleExportJson = useCallback(() => {
+    const diagramData = {
+      nodes,
+      edges,
+      diagramName,
+      timestamp: new Date().toISOString()
+    };
+    
+    const blob = new Blob([JSON.stringify(diagramData, null, 2)], { 
+      type: 'application/json' 
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${diagramName.replace(/\s+/g, '_')}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [nodes, edges, diagramName]);
+
+  return (
+    <div style={{ width: '100vw', height: '100vh', display: 'flex' }}>
+      {/* Sidebar */}
+      <Sidebar 
+        isMinimized={isSidebarMinimized}
+        onToggle={() => setIsSidebarMinimized(prev => !prev)}
+      />
+      
+      {/* Área Principal do Diagrama */}
+      <div style={{ flexGrow: 1, height: '100%' }}>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          onNodesDelete={onNodesDelete}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          fitView
+          className="react-flow-diagram"
+          connectionLineType="smoothstep"
+          connectionMode="loose"
+        >
+          <Background 
+            variant="dots" 
+            gap={20} 
+            size={1}
+            color="#94a3b8"
+          />
+          <Controls 
+            position="bottom-left"
+            showInteractive={false}
+          />
+          <MiniMap 
+            position="bottom-right"
+            nodeColor="#e2e8f0"
+            maskColor="rgba(0, 0, 0, 0.1)"
+            style={{
+              backgroundColor: '#f8fafc',
+              border: '1px solid #e2e8f0'
+            }}
+          />
+          
+          {/* Painel de ferramentas simplificado */}
+          <Panel position="top-left" className="bg-white rounded-lg shadow-lg p-3 border">
+            <div className="flex items-center gap-6">
+              {/* Título do diagrama */}
+              <div className="flex items-center">
+                <input
+                  type="text"
+                  value={diagramName}
+                  onChange={(e) => setDiagramName(e.target.value)}
+                  className="text-lg font-semibold bg-transparent border-none outline-none min-w-[200px]"
+                  placeholder="Nome do Diagrama"
+                />
+              </div>
+              
+              {/* Ferramentas */}
+              <div className="flex gap-2">
+                <button
+                  onClick={handleAddNode}
+                  className="px-3 py-2 text-sm rounded-md transition-colors bg-blue-500 text-white hover:bg-blue-600"
+                >
+                  Adicionar Tabela
+                </button>
+                <button
+                  onClick={testLocalStorage}
+                  className="px-3 py-2 text-sm rounded-md transition-colors bg-purple-500 text-white hover:bg-purple-600"
+                  title="Testar localStorage"
+                >
+                  Debug
+                </button>
+                <button
+                  onClick={handleClear}
+                  className="px-3 py-2 text-sm rounded-md transition-colors bg-gray-500 text-white hover:bg-gray-600"
+                >
+                  Limpar
+                </button>
+                <button
+                  onClick={handleExportJson}
+                  className="px-3 py-2 text-sm rounded-md transition-colors bg-green-500 text-white hover:bg-green-600"
+                  title="Exportar diagrama como JSON"
+                >
+                  Exportar JSON
+                </button>
+                <button
+                  onClick={() => navigate('/access-manager')}
+                  className="px-3 py-2 text-sm rounded-md transition-colors bg-orange-500 text-white hover:bg-orange-600"
+                  title="Gerenciar acessos do sistema"
+                >
+                  Gerenciar Acessos
+                </button>
+              </div>
+            </div>
+          </Panel>
+        </ReactFlow>
+      </div>
+    </div>
+  );
+};
+
+export default DiagramFlowBasic;

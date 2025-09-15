@@ -1,0 +1,84 @@
+/* CSS específico para páginas de landing/login */
+.page-home, .page-login {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+/* CSS para o diagrama - layout otimizado sem rolagem */
+.diagram-app {
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* CSS original do projeto base - permitir scroll para Home */
+#root {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  /* Removido: max-height: 100vh; overflow: hidden; para permitir scroll */
+}
+
+/* Cursors personalizados para o diagrama */
+.cursor-add-table {
+  cursor: crosshair !important;
+}
+
+.middle-mouse-dragging {
+  cursor: grabbing !important;
+}
+
+.cursor-default {
+  cursor: default;
+}
+
+/* Preview da criação de tabela */
+.table-creation-preview {
+  border: 2px dashed #3b82f6;
+  background-color: rgba(59, 130, 246, 0.1);
+  border-radius: 8px;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
