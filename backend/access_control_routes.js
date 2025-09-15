@@ -3,8 +3,41 @@
  * Gerenciamento de classificações e permissões granulares
  */
 
-const express = require('express');
 const mysql = require('mysql2/promise');
+const jwt = require('jsonwebtoken');
+
+module.exports = (app) => {
+  // Configuração do banco (deve ser a mesma do server.js)
+  const dbConfig = {
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'starttech_db',
+    port: process.env.DB_PORT || 3306
+  };
+
+  // Função para conectar ao banco
+  async function connectDB() {
+    return await mysql.createConnection(dbConfig);
+  }
+
+  // Middleware de autenticação (deve ser o mesmo do server.js)
+  const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+      return res.status(401).json({ error: 'Token de acesso requerido' });
+    }
+
+    jwt.verify(token, process.env.JWT_SECRET || 'secret-key', (err, user) => {
+      if (err) {
+        return res.status(403).json({ error: 'Token inválido' });
+      }
+      req.user = user;
+      next();
+    });
+  };
 
 // ====================================================
 // CLASSIFICAÇÕES POR DIAGRAMA
@@ -593,6 +626,4 @@ app.put('/api/diagrams/:diagramId/tables/:tableNodeId/classification', authentic
   }
 });
 
-module.exports = {
-  // Exportar funções se necessário para testes
-};
+}; // Fechar a função module.exports

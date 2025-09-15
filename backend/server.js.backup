@@ -14,9 +14,6 @@ require('dotenv').config({ path: path.join(__dirname, '.env') });
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Array em memória para classificações criadas dinamicamente
-let createdClassifications = [];
-
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: '10mb' })); // Aumentar limite para diagramas grandes
@@ -50,7 +47,7 @@ async function connectDB() {
   }
 }
 
-// Middleware de autenticação simplificado para desenvolvimento
+// Middleware de autenticação
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -59,18 +56,6 @@ const authenticateToken = (req, res, next) => {
     return res.status(401).json({ error: 'Token de acesso requerido' });
   }
 
-  // Durante desenvolvimento, aceitar tokens simples
-  if (token === 'admin@starttech.com' || token.includes('@')) {
-    req.user = {
-      userId: 1,
-      email: token,
-      role: 'admin',
-      name: 'Administrador'
-    };
-    return next();
-  }
-
-  // Tentar verificar JWT se não for um token simples
   jwt.verify(token, process.env.JWT_SECRET || 'secret-key', (err, user) => {
     if (err) {
       return res.status(403).json({ error: 'Token inválido' });
@@ -81,7 +66,7 @@ const authenticateToken = (req, res, next) => {
 };
 
 // Importar rotas de controle de acesso
-// require('./access_control_routes')(app); // Temporariamente desabilitado devido a dependências do schema
+require('./access_control_routes')(app);
 
 // 🔐 Rota de Login
 app.post('/api/auth/login', async (req, res) => {
@@ -135,42 +120,6 @@ app.post('/api/auth/login', async (req, res) => {
 
   } catch (error) {
     console.error('Erro no login:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
-  }
-});
-
-// 🛠️ Rota temporária para criar usuário admin
-app.post('/api/create-admin', async (req, res) => {
-  try {
-    const connection = await connectDB();
-    
-    // Verificar se já existe admin
-    const [existing] = await connection.execute(
-      'SELECT id FROM users WHERE email = ?',
-      ['admin@starttech.com']
-    );
-    
-    if (existing.length > 0) {
-      await connection.end();
-      return res.json({ message: 'Usuário admin já existe' });
-    }
-    
-    // Criar usuário admin
-    const [result] = await connection.execute(
-      'INSERT INTO users (email, password, name, role) VALUES (?, ?, ?, ?)',
-      ['admin@starttech.com', 'admin123', 'Administrador', 'admin']
-    );
-    
-    await connection.end();
-    
-    res.json({ 
-      message: 'Usuário admin criado com sucesso!',
-      email: 'admin@starttech.com',
-      password: 'admin123'
-    });
-    
-  } catch (error) {
-    console.error('Erro ao criar admin:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
@@ -564,8 +513,7 @@ app.get('/api/health', async (req, res) => {
 // Carregar rotas no contexto atual (mesmo arquivo)
 // As rotas usam o 'app' já definido, então incluímos o código diretamente
 
-// 📋 Listar classificações de um diagrama (DESABILITADO - usando versão simplificada)
-/*
+// 📋 Listar classificações de um diagrama
 app.get('/api/diagrams/:diagramId/classifications', authenticateToken, async (req, res) => {
   try {
     const { diagramId } = req.params;
@@ -627,10 +575,8 @@ app.get('/api/diagrams/:diagramId/classifications', authenticateToken, async (re
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
-*/
 
-// ➕ Criar nova classificação (DESABILITADO - aguardando schema completo)
-/*
+// ➕ Criar nova classificação
 app.post('/api/diagrams/:diagramId/classifications', authenticateToken, async (req, res) => {
   try {
     const { diagramId } = req.params;
@@ -690,23 +636,18 @@ app.post('/api/diagrams/:diagramId/classifications', authenticateToken, async (r
     }
   }
 });
-*/
-
-// 🧪 Rota de teste para debug
-app.get('/api/test-auth', authenticateToken, (req, res) => {
-  console.log('🧪 Teste auth - user:', req.user);
-  res.json({ message: 'Auth OK', user: req.user });
-});
 
 // 🔍 Verificar permissões efetivas do usuário  
 app.get('/api/diagrams/:diagramId/my-permissions', authenticateToken, async (req, res) => {
   try {
     const { diagramId } = req.params;
     console.log(`🔍 Verificando permissões para diagrama ${diagramId}, usuário: ${req.user.email}, role: ${req.user.role}`);
+    const connection = await connectDB();
     
-    // Admin tem acesso total a tudo - sem necessidade de conexão DB
+    // Admin tem acesso total a tudo
     if (req.user.role === 'admin') {
       console.log('✅ Usuário é admin - acesso total concedido');
+      await connection.end();
       return res.json({
         success: true,
         isOwner: true,
@@ -717,216 +658,90 @@ app.get('/api/diagrams/:diagramId/my-permissions', authenticateToken, async (req
       });
     }
     
-    // Para usuários não-admin, por enquanto conceder acesso também (temporário)
-    console.log('⚠️ Usuário não é admin - concedendo acesso temporário');
+    // Verificar se é dono do diagrama
+    console.log(`🔍 Verificando se usuário ${req.user.email} é dono do diagrama ${diagramId}`);
+    const [ownerCheck] = await connection.execute(`
+      SELECT user_id FROM diagrams 
+      WHERE id = ? AND user_id = ? AND is_active = 1
+    `, [diagramId, req.user.userId]);
+
+    const isOwner = ownerCheck.length > 0;
+    console.log(`🔍 É dono do diagrama? ${isOwner}`);
+
+    // Se é dono, tem acesso total
+    if (isOwner) {
+      console.log('✅ Usuário é dono - acesso total concedido');
+      await connection.end();
+      return res.json({
+        success: true,
+        isOwner: true,
+        hasAccess: true,
+        permissions: {},
+        visibleTables: [],
+        userRole: req.user.role
+      });
+    }
+
+    // Verificar acesso ao diagrama
+    const [accessCheck] = await connection.execute(`
+      SELECT access_level FROM diagram_access
+      WHERE diagram_id = ? AND user_email = ? AND is_active = 1
+      AND (expires_at IS NULL OR expires_at > NOW())
+    `, [diagramId, req.user.email]);
+
+    if (accessCheck.length === 0) {
+      await connection.end();
+      return res.json({
+        success: true,
+        isOwner: false,
+        hasAccess: false,
+        permissions: {},
+        visibleTables: [],
+        userRole: req.user.role
+      });
+    }
+
+    // Buscar permissões específicas por classificação
+    const [permissions] = await connection.execute(`
+      SELECT 
+        dc.id as classification_id,
+        COALESCE(cp.permission_type, 
+          CASE 
+            WHEN ? = 'admin' THEN 'admin'
+            WHEN ? = 'edit' THEN 'edit'
+            WHEN dc.is_default = TRUE THEN 'view'
+            ELSE NULL
+          END
+        ) as permission_type
+      FROM diagram_classifications dc
+      LEFT JOIN classification_permissions cp ON dc.id = cp.classification_id 
+        AND cp.user_email = ? AND cp.is_active = 1
+        AND (cp.expires_at IS NULL OR cp.expires_at > NOW())
+      WHERE dc.diagram_id = ? AND dc.is_active = 1
+    `, [accessCheck[0].access_level, accessCheck[0].access_level, req.user.email, diagramId]);
+
+    // Montar objeto de permissões
+    const userPermissions = {};
+    permissions.forEach(perm => {
+      if (perm.permission_type) {
+        userPermissions[perm.classification_id] = perm.permission_type;
+      }
+    });
+
+    await connection.end();
+
     res.json({
       success: true,
       isOwner: false,
       hasAccess: true,
-      permissions: {},
-      visibleTables: [],
+      permissions: userPermissions,
+      visibleTables: [], // TODO: implementar lista específica se necessário
       userRole: req.user.role
     });
 
   } catch (error) {
     console.error('❌ Erro ao verificar permissões:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
-  }
-});
-
-// ====================================================
-// ROTAS SIMPLIFICADAS DE CONTROLE DE ACESSO
-// ====================================================
-
-// 📋 Rota simplificada para classificações de diagrama
-app.get('/api/diagrams/:diagramId/classifications', authenticateToken, async (req, res) => {
-  try {
-    console.log('📋 Acessando classificações para diagrama:', req.params.diagramId);
-    
-    // Retornar classificações padrão + classificações criadas dinamicamente
-    if (req.user.role === 'admin') {
-      const defaultClassifications = [
-        { id: 1, name: 'Público', description: 'Acesso público', color: '#10B981', isDefault: true },
-        { id: 2, name: 'Restrito', description: 'Acesso restrito', color: '#F59E0B', isDefault: false },
-        { id: 3, name: 'Confidencial', description: 'Acesso confidencial', color: '#EF4444', isDefault: false }
-      ];
-      
-      // Combinar classificações padrão com as criadas dinamicamente
-      const allClassifications = [...defaultClassifications, ...createdClassifications];
-      console.log('📋 Retornando', allClassifications.length, 'classificações');
-      
-      res.json(allClassifications);
-    } else {
-      res.json([]);
-    }
-  } catch (error) {
-    console.error('❌ Erro ao buscar classificações:', error);
-    res.status(500).json({ error: 'Erro ao buscar classificações' });
-  }
-});
-
-// ➕ Rota simplificada para criar classificação
-app.post('/api/diagrams/:diagramId/classifications', authenticateToken, async (req, res) => {
-  try {
-    console.log('➕ Criando classificação para diagrama:', req.params.diagramId);
-    console.log('📝 Dados recebidos:', req.body);
-    
-    // Verificar se é admin
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Apenas administradores podem criar classificações' });
-    }
-
-    const { name, description, level } = req.body;
-    
-    if (!name || !name.trim()) {
-      return res.status(400).json({ error: 'Nome da classificação é obrigatório' });
-    }
-
-    // Simular criação da classificação (retornar um ID fictício)
-    const newClassification = {
-      id: Date.now(), // ID temporário baseado em timestamp
-      name: name.trim(),
-      description: description || '',
-      color: level === 'high' ? '#EF4444' : level === 'medium' ? '#F59E0B' : '#10B981',
-      isDefault: false,
-      createdAt: new Date().toISOString()
-    };
-
-    // Adicionar ao array em memória
-    createdClassifications.push(newClassification);
-
-    console.log('✅ Classificação criada:', newClassification);
-    console.log('📋 Total de classificações criadas:', createdClassifications.length);
-    res.status(201).json(newClassification);
-
-  } catch (error) {
-    console.error('❌ Erro ao criar classificação:', error);
-    res.status(500).json({ error: 'Erro ao criar classificação' });
-  }
-});
-
-// ✏️ Rota para editar classificação
-app.put('/api/classifications/:id', authenticateToken, async (req, res) => {
-  try {
-    const classificationId = parseInt(req.params.id);
-    console.log('✏️ Editando classificação ID:', classificationId);
-    
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Apenas administradores podem editar classificações' });
-    }
-
-    const { name, description, color, level } = req.body;
-    
-    if (!name || !name.trim()) {
-      return res.status(400).json({ error: 'Nome da classificação é obrigatório' });
-    }
-
-    // Encontrar a classificação no array
-    const index = createdClassifications.findIndex(c => c.id === classificationId);
-    
-    if (index === -1) {
-      return res.status(404).json({ error: 'Classificação não encontrada' });
-    }
-
-    // Atualizar a classificação
-    const updatedClassification = {
-      ...createdClassifications[index],
-      name: name.trim(),
-      description: description || '',
-      color: color || (level === 'high' ? '#EF4444' : level === 'medium' ? '#F59E0B' : '#10B981'),
-      updatedAt: new Date().toISOString()
-    };
-
-    createdClassifications[index] = updatedClassification;
-
-    console.log('✅ Classificação atualizada:', updatedClassification);
-    res.json(updatedClassification);
-
-  } catch (error) {
-    console.error('❌ Erro ao editar classificação:', error);
-    res.status(500).json({ error: 'Erro ao editar classificação' });
-  }
-});
-
-// 🗑️ Rota para deletar classificação
-app.delete('/api/classifications/:id', authenticateToken, async (req, res) => {
-  try {
-    const classificationId = parseInt(req.params.id);
-    console.log('🗑️ Deletando classificação ID:', classificationId);
-    
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Apenas administradores podem deletar classificações' });
-    }
-
-    // Verificar se não é uma classificação padrão (IDs 1, 2, 3)
-    if (classificationId <= 3) {
-      return res.status(400).json({ error: 'Não é possível deletar classificações padrão' });
-    }
-
-    // Encontrar e remover a classificação do array
-    const index = createdClassifications.findIndex(c => c.id === classificationId);
-    
-    if (index === -1) {
-      return res.status(404).json({ error: 'Classificação não encontrada' });
-    }
-
-    const deletedClassification = createdClassifications.splice(index, 1)[0];
-
-    console.log('✅ Classificação deletada:', deletedClassification.name);
-    console.log('📋 Total de classificações restantes:', createdClassifications.length);
-    res.json({ message: 'Classificação deletada com sucesso', deletedClassification });
-
-  } catch (error) {
-    console.error('❌ Erro ao deletar classificação:', error);
-    res.status(500).json({ error: 'Erro ao deletar classificação' });
-  }
-});
-
-// 🔑 Rota simplificada para permissões de classificação
-app.get('/api/classifications/:id/permissions', authenticateToken, async (req, res) => {
-  try {
-    console.log('🔑 Acessando permissões da classificação:', req.params.id);
-    
-    // Retornar permissões padrão
-    res.json({
-      classificationId: parseInt(req.params.id),
-      permissions: [
-        { userEmail: 'admin@starttech.com', accessLevel: 'admin', granted: true },
-        { userEmail: 'user@starttech.com', accessLevel: 'view', granted: true }
-      ]
-    });
-  } catch (error) {
-    console.error('❌ Erro ao buscar permissões da classificação:', error);
-    res.status(500).json({ error: 'Erro ao buscar permissões' });
-  }
-});
-
-// 🔐 Rota simplificada para acesso de diagrama
-app.get('/api/diagrams/:diagramId/access', authenticateToken, async (req, res) => {
-  try {
-    console.log('🔐 Acessando controle de acesso para diagrama:', req.params.diagramId);
-    
-    // Retornar acesso padrão para admin
-    if (req.user.role === 'admin') {
-      res.json({
-        diagramId: req.params.diagramId,
-        userEmail: req.user.email,
-        accessLevel: 'admin',
-        permissions: ['view', 'edit', 'admin'],
-        isOwner: true
-      });
-    } else {
-      res.json({
-        diagramId: req.params.diagramId,
-        userEmail: req.user.email,
-        accessLevel: 'view',
-        permissions: ['view'],
-        isOwner: false
-      });
-    }
-  } catch (error) {
-    console.error('❌ Erro ao buscar acesso:', error);
-    res.status(500).json({ error: 'Erro ao buscar acesso' });
   }
 });
 
