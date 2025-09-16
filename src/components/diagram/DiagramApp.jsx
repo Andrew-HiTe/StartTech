@@ -62,6 +62,8 @@ function DiagramFlow({ isSidebarMinimized, setIsSidebarMinimized }) {
     getVisibleNodes,
     getVisibleEdges,
     hasAccess,
+    setConnectionDragging,
+    isConnectionDragging,
     edges: storeEdges // Renomear para evitar conflito
   } = useDiagramStore();
 
@@ -94,24 +96,23 @@ function DiagramFlow({ isSidebarMinimized, setIsSidebarMinimized }) {
   const allNodes = previewNode ? [...stableNodes, previewNode] : stableNodes;
   console.log('✅ SOLUÇÃO DIRETA - allNodes criado:', allNodes.length, 'nós');
 
-  // Efeito para centralizar visualização quando nós mudarem
-  useEffect(() => {
-    if (allNodes.length > 0 && reactFlowInstance) {
-      // Pequeno delay para garantir que os nós foram renderizados
-      const timer = setTimeout(() => {
-        reactFlowInstance.fitView({
-          padding: 0.2,
-          includeHiddenNodes: false,
-          minZoom: 0.5,
-          maxZoom: 1.5,
-          duration: 800
-        });
-        console.log('🎯 Viewport centralizada automaticamente para', allNodes.length, 'nós');
-      }, 200);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [allNodes.length, reactFlowInstance]);
+  // REMOVIDO: Efeito de centralização automática que atrapalhava a UX
+  // Agora a centralização só acontece quando o usuário clicar no botão "Centralizar"
+  // useEffect(() => {
+  //   if (allNodes.length > 0 && reactFlowInstance) {
+  //     const timer = setTimeout(() => {
+  //       reactFlowInstance.fitView({
+  //         padding: 0.2,
+  //         includeHiddenNodes: false,
+  //         minZoom: 0.5,
+  //         maxZoom: 1.5,
+  //         duration: 800
+  //       });
+  //       console.log('🎯 Viewport centralizada automaticamente para', allNodes.length, 'nós');
+  //     }, 200);
+  //     return () => clearTimeout(timer);
+  //   }
+  // }, [allNodes.length, reactFlowInstance]);
 
   // Função para centralizar visualização manualmente
   const handleCenterView = useCallback(() => {
@@ -141,16 +142,27 @@ function DiagramFlow({ isSidebarMinimized, setIsSidebarMinimized }) {
   const handleConnectStart = useCallback(
     (event, { nodeId, handleId, handleType }) => {
       console.log('🔗 handleConnectStart:', { nodeId, handleId, handleType });
+      console.log('🔗 Event details:', event);
+      setConnectionDragging(true); // Marcar que uma conexão está sendo arrastada
     },
-    []
+    [setConnectionDragging]
   );
 
   // Handler para end de conexão
   const handleConnectEnd = useCallback(
     (event) => {
       console.log('🔗 handleConnectEnd:', event);
+      console.log('🔗 Event target:', event.target);
+      console.log('🔗 Event current target:', event.currentTarget);
+      
+      // Verificar se o evento está sendo cancelado
+      if (event.defaultPrevented) {
+        console.log('⚠️ handleConnectEnd: evento foi preventDefault!');
+      }
+      
+      setConnectionDragging(false); // Marcar que o arraste terminou
     },
-    []
+    [setConnectionDragging]
   );
   const handleConnect = useCallback(
     (connection) => {
@@ -609,7 +621,7 @@ function DiagramFlow({ isSidebarMinimized, setIsSidebarMinimized }) {
                 animated: false,
                 style: { stroke: '#2196f3', strokeWidth: 3 },
               }}
-              connectionRadius={50}
+              connectionRadius={80}
               connectOnClick={true}
               connectionLineType={ConnectionLineType.SmoothStep}
               connectionLineStyle={{ stroke: '#2196f3', strokeWidth: 3, strokeDasharray: '5,5' }}
@@ -619,21 +631,29 @@ function DiagramFlow({ isSidebarMinimized, setIsSidebarMinimized }) {
               elementsSelectable={true}
               connectionLineComponent={undefined} // Preview da conexão ativado
               selectNodesOnDrag={false}
+              deleteKeyCode={46} // Tecla Delete
+              multiSelectionKeyCode={17} // Ctrl
+              isValidConnection={(connection) => {
+                console.log('🔍 isValidConnection:', connection);
+                // Validar conexão antes de permitir
+                if (!connection.source || !connection.target) {
+                  console.log('❌ Conexão inválida: source ou target ausente');
+                  return false;
+                }
+                if (connection.source === connection.target) {
+                  console.log('❌ Conexão inválida: mesmo nó');
+                  return false;
+                }
+                console.log('✅ Conexão válida');
+                return true;
+              }}
               nodesFocusable={true}
               edgesFocusable={true}
               minZoom={0.1}
               maxZoom={4}
-              isValidConnection={(connection) => {
-                // Validar conexão antes de permitir
-                if (!connection.source || !connection.target) return false;
-                if (connection.source === connection.target) return false;
-                return true;
-              }}
               panOnDrag={panOnDrag}
               selectionOnDrag={selectionOnDrag}
               selectionMode={SelectionMode.Partial}
-              multiSelectionKeyCode="Shift"
-              deleteKeyCode="Delete"
               proOptions={proOptions}
               className={
                 currentTool === 'add-table' 

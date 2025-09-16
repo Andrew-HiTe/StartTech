@@ -23,6 +23,7 @@ export const useDiagramStore = create((set, get) => ({
   currentTool: 'select',
   diagramName: 'Novo Diagrama C4',
   lastNodeCreation: 0, // Timestamp da última criação de nó
+  isConnectionDragging: false, // Novo estado para rastrear arraste de conexões
   
   // Persistência state
   currentDiagramId: null,
@@ -404,6 +405,12 @@ export const useDiagramStore = create((set, get) => ({
   setIsConnecting: (connecting) => set({ isConnecting: connecting }),
   
   setConnectionMode: (mode) => set({ connectionMode: mode }),
+
+  // Funções para controlar o estado de arraste de conexões
+  setConnectionDragging: (isDragging) => {
+    console.log('🎯 setConnectionDragging:', isDragging);
+    set({ isConnectionDragging: isDragging });
+  },
   
   updateNodeData: (nodeId, data) => {
     set({

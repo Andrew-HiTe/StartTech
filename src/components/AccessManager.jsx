@@ -1,17 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDiagramManager } from '../stores/diagramManager';
+import { useAuth } from '../hooks/useAuth.jsx';
+import { useDiagramPermissions } from '../hooks/useDiagramPermissions.js';
 import usersIcon from '../assets/users-icon.svg';
 import './AccessManager.css';
 
 const AccessManager = () => {
   const navigate = useNavigate();
-  const { diagrams, addUserAccess, removeUserAccess, updateUserRole } = useDiagramManager();
+  const { user } = useAuth();
+  const { diagrams, deleteDiagram } = useDiagramManager();
+  const { canCreateDiagrams, canManageAccess } = useDiagramPermissions();
+  
   const [selectedProject, setSelectedProject] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [newCollaborators, setNewCollaborators] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [projectUsers, setProjectUsers] = useState([]);
+  const [projectClassifications, setProjectClassifications] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('users'); // 'users', 'classifications'
 
+  // Mock de usuários disponíveis - em produção viria do backend
   const availableUsers = [
     { id: 1, name: 'João Silva', email: 'joao@empresa.com' },
     { id: 2, name: 'Maria Santos', email: 'maria@empresa.com' },
@@ -20,34 +29,208 @@ const AccessManager = () => {
     { id: 5, name: 'Carlos Oliveira', email: 'carlos@empresa.com' }
   ];
 
-  // Buscar projeto selecionado e seus membros
-  const selectedDiagram = diagrams.find(d => d.id === selectedProject);
-  const projectMembers = selectedDiagram?.shareSettings?.users || [];
-  const projectRoles = selectedDiagram?.shareSettings?.roles || {};
-
   const filteredUsers = availableUsers.filter(user =>
     (user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase())) &&
-    !projectMembers.includes(user.email) // Não mostrar usuários que já têm acesso
+    !projectUsers.find(pu => pu.email === user.email)
   );
 
-  const addCollaborator = (user) => {
-    if (selectedProject && !projectMembers.includes(user.email)) {
-      addUserAccess(selectedProject, user.email);
-      setSearchTerm('');
-      setShowSuggestions(false);
-    }
-  };
-
-  const removeCollaborator = (userEmail) => {
+  // Carregar usuários do projeto quando selecionado
+  useEffect(() => {
     if (selectedProject) {
-      removeUserAccess(selectedProject, userEmail);
+      loadProjectUsers();
+      loadProjectClassifications();
+    }
+  }, [selectedProject]);
+
+  const loadProjectUsers = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`http://localhost:3001/api/diagrams/${selectedProject}/users`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setProjectUsers(data.users || []);
+      } else {
+        console.error('Erro ao carregar usuários do projeto');
+        setProjectUsers([]);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar usuários:', error);
+      setProjectUsers([]);
+    }
+    setLoading(false);
+  };
+
+  const loadProjectClassifications = async () => {
+    try {
+      const response = await fetch(`http://localhost:3001/api/diagrams/${selectedProject}/classifications`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setProjectClassifications(data.classifications || []);
+      } else {
+        console.error('Erro ao carregar classificações do projeto');
+        setProjectClassifications([]);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar classificações:', error);
+      setProjectClassifications([]);
     }
   };
 
-  const updateAccess = (userEmail, accessLevel) => {
-    if (selectedProject && updateUserRole) {
-      updateUserRole(selectedProject, userEmail, accessLevel);
+  const addCollaborator = async (user, role = 'leitor') => {
+    if (!selectedProject) return;
+
+    try {
+      const response = await fetch(`http://localhost:3001/api/diagrams/${selectedProject}/users`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          userEmail: user.email,
+          role: role
+        })
+      });
+
+      if (response.ok) {
+        setSearchTerm('');
+        setShowSuggestions(false);
+        loadProjectUsers(); // Recarregar lista
+      } else {
+        const error = await response.json();
+        alert('Erro ao adicionar colaborador: ' + error.error);
+      }
+    } catch (error) {
+      console.error('Erro ao adicionar colaborador:', error);
+      alert('Erro ao adicionar colaborador');
+    }
+  };
+
+  const removeCollaborator = async (userEmail) => {
+    if (!selectedProject) return;
+
+    if (confirm(`Tem certeza que deseja remover o acesso de ${userEmail}?`)) {
+      try {
+        const response = await fetch(`http://localhost:3001/api/diagrams/${selectedProject}/users/${encodeURIComponent(userEmail)}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          loadProjectUsers(); // Recarregar lista
+        } else {
+          const error = await response.json();
+          alert('Erro ao remover colaborador: ' + error.error);
+        }
+      } catch (error) {
+        console.error('Erro ao remover colaborador:', error);
+        alert('Erro ao remover colaborador');
+      }
+    }
+  };
+
+  const updateUserRole = async (userEmail, newRole) => {
+    if (!selectedProject) return;
+
+    try {
+      const response = await fetch(`http://localhost:3001/api/diagrams/${selectedProject}/users`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          userEmail: userEmail,
+          role: newRole
+        })
+      });
+
+      if (response.ok) {
+        loadProjectUsers(); // Recarregar lista
+      } else {
+        const error = await response.json();
+        alert('Erro ao atualizar role: ' + error.error);
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar role:', error);
+      alert('Erro ao atualizar role');
+    }
+  };
+
+  const assignClassificationsToUser = async (userEmail, classificationIds) => {
+    if (!selectedProject) return;
+
+    try {
+      const response = await fetch(`http://localhost:3001/api/diagrams/${selectedProject}/users/${encodeURIComponent(userEmail)}/classifications`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          classificationIds: classificationIds
+        })
+      });
+
+      if (response.ok) {
+        loadProjectUsers(); // Recarregar lista
+      } else {
+        const error = await response.json();
+        alert('Erro ao atribuir classificações: ' + error.error);
+      }
+    } catch (error) {
+      console.error('Erro ao atribuir classificações:', error);
+      alert('Erro ao atribuir classificações');
+    }
+  };
+
+  const handleDeleteDiagram = async (diagramId) => {
+    const diagram = diagrams.find(d => d.id === diagramId);
+    if (!diagram) return;
+
+    if (confirm(`Tem certeza que deseja excluir o diagrama "${diagram.name}"? Esta ação não pode ser desfeita.`)) {
+      const result = await deleteDiagram(diagramId);
+      if (result.success) {
+        alert('Diagrama excluído com sucesso!');
+        if (selectedProject === diagramId) {
+          setSelectedProject('');
+        }
+      } else {
+        alert('Erro ao excluir diagrama: ' + result.error);
+      }
+    }
+  };
+
+  // Verificar se o usuário pode acessar esta página
+  if (!canManageAccess()) {
+    return (
+      <div className="access-manager-container">
+        <div className="access-denied">
+          <h2>🔒 Acesso Negado</h2>
+          <p>Apenas administradores podem gerenciar acessos aos diagramas.</p>
+          <button onClick={() => navigate('/')} className="btn-back">
+            Voltar ao Início
+          </button>
+        </div>
+      </div>
+    );
+  }
     }
   };
 

@@ -224,10 +224,10 @@ export const Toolbar = ({ onCenterView }) => {
           📄 Exportar JSON
         </button>
 
-        {/* Novo botão de Configurar Acesso */}
+        {/* Novo botão de Configurações das tabelas */}
         {currentDiagramId && (
           <button
-            className="px-3 py-1.5 rounded-md text-sm font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors whitespace-nowrap flex-shrink-0"
+            className="px-4 py-2 rounded-md text-sm font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors whitespace-nowrap flex-shrink-0 flex items-center gap-2"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -235,7 +235,8 @@ export const Toolbar = ({ onCenterView }) => {
             }}
             title="Configurar classificações e permissões de acesso"
           >
-            🔐 Configurar Acesso
+            <span className="text-base">⚙️</span>
+            Configurações das tabelas
           </button>
         )}
 

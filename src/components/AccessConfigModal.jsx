@@ -360,7 +360,10 @@ const AccessConfigModal = ({ isOpen, onClose, diagramId, diagramName }) => {
         {/* Header */}
         <div className="px-8 py-6 border-b border-gray-200 flex justify-between items-center bg-gradient-to-r from-blue-50 to-indigo-50">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">🔐 Configurar Acesso</h2>
+            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <span className="text-2xl">⚙️</span>
+              Configurações das tabelas
+            </h2>
             <p className="text-sm text-gray-600 mt-1">Diagrama: <span className="font-medium">{diagramName}</span></p>
           </div>
           <button

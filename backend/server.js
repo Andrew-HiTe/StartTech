@@ -1261,6 +1261,304 @@ app.put('/api/tables/:tableId/classification', authenticateToken, async (req, re
   }
 });
 
+// ======================================
+// 🎯 ROTAS DE PERMISSIONAMENTO AVANÇADO
+// ======================================
+
+// 🔍 Obter role do usuário em um diagrama específico
+app.get('/api/diagrams/:diagramId/user-role', authenticateToken, async (req, res) => {
+  try {
+    const { diagramId } = req.params;
+    const connection = await connectDB();
+
+    // Verificar se é admin global
+    if (req.user.role === 'admin') {
+      await connection.end();
+      return res.json({ role: 'admin' });
+    }
+
+    // Verificar acesso específico ao diagrama
+    const [access] = await connection.execute(`
+      SELECT access_level 
+      FROM diagram_access 
+      WHERE diagram_id = ? AND user_email = ? AND is_active = 1
+    `, [diagramId, req.user.email]);
+
+    await connection.end();
+
+    if (access.length > 0) {
+      res.json({ role: access[0].access_level });
+    } else {
+      res.json({ role: null });
+    }
+
+  } catch (error) {
+    console.error('❌ Erro ao verificar role do usuário:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// 🔍 Obter todas as permissões do usuário (todos os diagramas)
+app.get('/api/user/diagram-permissions', authenticateToken, async (req, res) => {
+  try {
+    const connection = await connectDB();
+    const permissions = {};
+
+    // Se for admin global, tem acesso a tudo
+    if (req.user.role === 'admin') {
+      // Buscar todos os diagramas para o admin
+      const [diagrams] = await connection.execute(`
+        SELECT id FROM diagrams WHERE is_active = 1
+      `);
+
+      diagrams.forEach(diagram => {
+        permissions[diagram.id] = {
+          role: 'admin',
+          allowedClassifications: [] // Admin vê tudo
+        };
+      });
+    } else {
+      // Buscar permissões específicas do usuário
+      const [userAccess] = await connection.execute(`
+        SELECT 
+          da.diagram_id,
+          da.access_level as role,
+          GROUP_CONCAT(cp.classification_id) as allowed_classifications
+        FROM diagram_access da
+        LEFT JOIN classification_permissions cp ON cp.user_email = da.user_email 
+          AND cp.diagram_id = da.diagram_id AND cp.is_active = 1
+        WHERE da.user_email = ? AND da.is_active = 1
+        GROUP BY da.diagram_id, da.access_level
+      `, [req.user.email]);
+
+      userAccess.forEach(access => {
+        permissions[access.diagram_id] = {
+          role: access.role,
+          allowedClassifications: access.allowed_classifications ? 
+            access.allowed_classifications.split(',').map(id => parseInt(id)) : []
+        };
+      });
+    }
+
+    await connection.end();
+    res.json({ permissions });
+
+  } catch (error) {
+    console.error('❌ Erro ao buscar permissões do usuário:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// 🎯 Adicionar usuário a um diagrama com role específica
+app.post('/api/diagrams/:diagramId/users', authenticateToken, async (req, res) => {
+  try {
+    const { diagramId } = req.params;
+    const { userEmail, role } = req.body;
+
+    // Apenas admin global pode gerenciar acessos
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Apenas administradores podem gerenciar acessos' });
+    }
+
+    if (!userEmail || !role) {
+      return res.status(400).json({ error: 'Email do usuário e role são obrigatórios' });
+    }
+
+    if (!['editor', 'leitor'].includes(role)) {
+      return res.status(400).json({ error: 'Role deve ser: editor ou leitor' });
+    }
+
+    const connection = await connectDB();
+
+    // Verificar se o diagrama existe
+    const [diagram] = await connection.execute(`
+      SELECT id FROM diagrams WHERE id = ? AND is_active = 1
+    `, [diagramId]);
+
+    if (diagram.length === 0) {
+      await connection.end();
+      return res.status(404).json({ error: 'Diagrama não encontrado' });
+    }
+
+    // Verificar se já existe acesso para este usuário
+    const [existing] = await connection.execute(`
+      SELECT id FROM diagram_access 
+      WHERE diagram_id = ? AND user_email = ? AND is_active = 1
+    `, [diagramId, userEmail]);
+
+    if (existing.length > 0) {
+      // Atualizar role existente
+      await connection.execute(`
+        UPDATE diagram_access 
+        SET access_level = ?, granted_by = ?, granted_at = CURRENT_TIMESTAMP
+        WHERE diagram_id = ? AND user_email = ?
+      `, [role, req.user.userId, diagramId, userEmail]);
+    } else {
+      // Criar novo acesso
+      await connection.execute(`
+        INSERT INTO diagram_access (diagram_id, user_email, access_level, granted_by)
+        VALUES (?, ?, ?, ?)
+      `, [diagramId, userEmail, role, req.user.userId]);
+    }
+
+    await connection.end();
+
+    res.json({
+      success: true,
+      message: `Acesso ${role} concedido ao usuário ${userEmail}`
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao adicionar usuário ao diagrama:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// 🗑️ Remover usuário de um diagrama
+app.delete('/api/diagrams/:diagramId/users/:userEmail', authenticateToken, async (req, res) => {
+  try {
+    const { diagramId, userEmail } = req.params;
+
+    // Apenas admin global pode gerenciar acessos
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Apenas administradores podem gerenciar acessos' });
+    }
+
+    const connection = await connectDB();
+
+    // Desativar acesso do usuário
+    await connection.execute(`
+      UPDATE diagram_access 
+      SET is_active = 0, removed_by = ?, removed_at = CURRENT_TIMESTAMP
+      WHERE diagram_id = ? AND user_email = ?
+    `, [req.user.userId, diagramId, userEmail]);
+
+    // Desativar permissões de classificação do usuário
+    await connection.execute(`
+      UPDATE classification_permissions 
+      SET is_active = 0, removed_by = ?, removed_at = CURRENT_TIMESTAMP
+      WHERE diagram_id = ? AND user_email = ?
+    `, [req.user.userId, diagramId, userEmail]);
+
+    await connection.end();
+
+    res.json({
+      success: true,
+      message: `Acesso removido do usuário ${userEmail}`
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao remover usuário do diagrama:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// 🏷️ Atribuir classificações a um usuário (para role "leitor")
+app.post('/api/diagrams/:diagramId/users/:userEmail/classifications', authenticateToken, async (req, res) => {
+  try {
+    const { diagramId, userEmail } = req.params;
+    const { classificationIds } = req.body;
+
+    // Apenas admin global pode gerenciar permissões
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Apenas administradores podem gerenciar permissões' });
+    }
+
+    if (!Array.isArray(classificationIds)) {
+      return res.status(400).json({ error: 'classificationIds deve ser um array' });
+    }
+
+    const connection = await connectDB();
+
+    // Verificar se o usuário tem acesso ao diagrama
+    const [userAccess] = await connection.execute(`
+      SELECT access_level FROM diagram_access 
+      WHERE diagram_id = ? AND user_email = ? AND is_active = 1
+    `, [diagramId, userEmail]);
+
+    if (userAccess.length === 0) {
+      await connection.end();
+      return res.status(404).json({ error: 'Usuário não tem acesso a este diagrama' });
+    }
+
+    // Remover permissões antigas
+    await connection.execute(`
+      UPDATE classification_permissions 
+      SET is_active = 0, removed_by = ?, removed_at = CURRENT_TIMESTAMP
+      WHERE diagram_id = ? AND user_email = ?
+    `, [req.user.userId, diagramId, userEmail]);
+
+    // Adicionar novas permissões
+    for (const classificationId of classificationIds) {
+      await connection.execute(`
+        INSERT INTO classification_permissions 
+        (diagram_id, user_email, classification_id, granted_by)
+        VALUES (?, ?, ?, ?)
+      `, [diagramId, userEmail, classificationId, req.user.userId]);
+    }
+
+    await connection.end();
+
+    res.json({
+      success: true,
+      message: `Permissões de classificação atualizadas para ${userEmail}`
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao atribuir classificações ao usuário:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// 🔍 Listar usuários de um diagrama com suas permissões
+app.get('/api/diagrams/:diagramId/users', authenticateToken, async (req, res) => {
+  try {
+    const { diagramId } = req.params;
+
+    // Apenas admin global pode ver usuários
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Apenas administradores podem ver usuários' });
+    }
+
+    const connection = await connectDB();
+
+    const [users] = await connection.execute(`
+      SELECT 
+        da.user_email,
+        da.access_level as role,
+        da.granted_at,
+        GROUP_CONCAT(
+          DISTINCT CONCAT(dc.id, ':', dc.name, ':', dc.color)
+        ) as allowed_classifications
+      FROM diagram_access da
+      LEFT JOIN classification_permissions cp ON da.user_email = cp.user_email 
+        AND da.diagram_id = cp.diagram_id AND cp.is_active = 1
+      LEFT JOIN diagram_classifications dc ON cp.classification_id = dc.id AND dc.is_active = 1
+      WHERE da.diagram_id = ? AND da.is_active = 1
+      GROUP BY da.user_email, da.access_level, da.granted_at
+      ORDER BY da.granted_at DESC
+    `, [diagramId]);
+
+    const formattedUsers = users.map(user => ({
+      email: user.user_email,
+      role: user.role,
+      grantedAt: user.granted_at,
+      allowedClassifications: user.allowed_classifications ? 
+        user.allowed_classifications.split(',').map(item => {
+          const [id, name, color] = item.split(':');
+          return { id: parseInt(id), name, color };
+        }) : []
+    }));
+
+    await connection.end();
+    res.json({ users: formattedUsers });
+
+  } catch (error) {
+    console.error('❌ Erro ao listar usuários do diagrama:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
 // Iniciar servidor
 app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
