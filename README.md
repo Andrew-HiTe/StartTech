@@ -299,7 +299,7 @@ AuditLog (id, user_id, action, entity_type, entity_id, timestamp)
 **Cauã** - *Arquiteto de Cloud*
 - GitHub: [@cauasls](https://github.com/cauasls)
 
-**Gustavo** - *Desenvolvimento Fullstack*
+**Gustavo** - *UX Designer*
 - GitHub: [@Gustavo](https://github.com/Guxtavo2002)
 
 ## 📄 Licença
