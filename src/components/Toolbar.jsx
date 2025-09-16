@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useDiagramStore } from '../stores/diagramStore.js';
 import AccessConfigModal from './AccessConfigModal.jsx';
 
-export const Toolbar = () => {
+export const Toolbar = ({ onCenterView }) => {
   const { 
     currentTool, 
     setCurrentTool, 
@@ -144,17 +144,35 @@ export const Toolbar = () => {
   ];
 
   return (
-    <div className="toolbar bg-white border-b border-gray-300 p-2 flex items-center justify-between shadow-sm">
-      <div className="flex items-center space-x-2">
+    <div className="toolbar bg-white border-b border-gray-300 p-2 flex items-center justify-between shadow-sm min-h-[3rem] overflow-x-auto">
+      <div className="flex items-center space-x-2 flex-shrink-0">
         {toolButtons.map(tool => (
           <button
             key={tool.id}
-            className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150 ${
+            className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150 whitespace-nowrap flex-shrink-0 ${
               tool.active 
                 ? 'bg-blue-600 text-white shadow-md' 
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
-            onClick={() => setCurrentTool(tool.id)}
+            onClick={(e) => {
+              console.log('🖱️ BOTÃO DA TOOLBAR CLICADO!', {
+                toolId: tool.id,
+                toolAnterior: currentTool,
+                novoTool: tool.id,
+                event: e,
+                target: e.target,
+                currentTarget: e.currentTarget
+              });
+              
+              // Verificar se setCurrentTool existe
+              if (typeof setCurrentTool === 'function') {
+                console.log('✅ setCurrentTool é uma função, chamando...');
+                setCurrentTool(tool.id);
+                console.log('✅ setCurrentTool executado para:', tool.id);
+              } else {
+                console.error('❌ setCurrentTool não é uma função!', typeof setCurrentTool);
+              }
+            }}
             title={tool.description}
           >
             <span className="mr-1">{tool.icon}</span>
@@ -164,7 +182,7 @@ export const Toolbar = () => {
         
         {selectedElements.length > 0 && (
           <button
-            className="px-3 py-2 rounded-md text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors duration-150"
+            className="px-3 py-2 rounded-md text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors duration-150 whitespace-nowrap flex-shrink-0"
             onClick={handleDelete}
             title="Excluir elementos selecionados"
           >
@@ -174,34 +192,32 @@ export const Toolbar = () => {
         )}
       </div>
 
-      <div className="flex items-center space-x-2">
-        {/* Save status indicator */}
-        {saveStatus === 'saved' && currentDiagramId && (
-          <span className="text-xs text-green-600 font-medium flex items-center">
-            ✓ Salvo no banco
-          </span>
+      <div className="flex items-center space-x-2 flex-shrink-0">
+        {/* Botão para centralizar visualização */}
+        {onCenterView && (
+          <button
+            className="px-3 py-2 rounded-md text-sm font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors duration-150 whitespace-nowrap flex-shrink-0"
+            onClick={onCenterView}
+            title="Centralizar visualização nos nós"
+          >
+            <span className="mr-1">🎯</span>
+            Centralizar
+          </button>
         )}
         
-        {saveStatus === 'saving' && (
-          <div className="flex items-center space-x-1 text-blue-600">
-            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
-            <span className="text-xs">Salvando...</span>
-          </div>
-        )}
-
         {/* Manual save button (only when auto-save is off) */}
         {!autoSaveEnabled && (
           <button
             onClick={handleManualSave}
             disabled={!isDirty || saveStatus === 'saving'}
-            className="px-3 py-1.5 rounded-md text-sm font-medium bg-green-100 text-green-700 hover:bg-green-200 transition-colors disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+            className="px-3 py-1.5 rounded-md text-sm font-medium bg-green-100 text-green-700 hover:bg-green-200 transition-colors disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed whitespace-nowrap flex-shrink-0"
           >
             💾 Salvar
           </button>
         )}
 
         <button
-          className="px-3 py-1.5 rounded-md text-sm font-medium bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors"
+          className="px-3 py-1.5 rounded-md text-sm font-medium bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors whitespace-nowrap flex-shrink-0"
           onClick={exportDiagram}
           title="Exportar diagrama como arquivo JSON"
         >
@@ -211,7 +227,7 @@ export const Toolbar = () => {
         {/* Novo botão de Configurar Acesso */}
         {currentDiagramId && (
           <button
-            className="px-3 py-1.5 rounded-md text-sm font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
+            className="px-3 py-1.5 rounded-md text-sm font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors whitespace-nowrap flex-shrink-0"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -221,6 +237,20 @@ export const Toolbar = () => {
           >
             🔐 Configurar Acesso
           </button>
+        )}
+
+        {/* Save status indicator - moved before info icon */}
+        {saveStatus === 'saved' && currentDiagramId && (
+          <span className="text-xs text-green-600 font-medium flex items-center whitespace-nowrap ml-2">
+            ✓ Salvo no banco
+          </span>
+        )}
+        
+        {saveStatus === 'saving' && (
+          <div className="flex items-center space-x-1 text-blue-600 whitespace-nowrap ml-2">
+            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+            <span className="text-xs">Salvando...</span>
+          </div>
         )}
 
         {/* Info icon with hover instructions - moved to last position */}

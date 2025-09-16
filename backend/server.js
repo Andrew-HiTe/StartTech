@@ -228,6 +228,8 @@ app.put('/api/diagrams/:id', authenticateToken, async (req, res) => {
 
     // Log para debug
     console.log('🔄 Atualizando diagrama ID:', id);
+    console.log('📊 Dados recebidos - nodes:', data.nodes?.length || 0, 'edges:', data.edges?.length || 0);
+    console.log('🔗 Edges recebidas:', data.edges);
     console.log('📊 Novos dados:', JSON.stringify(data).substring(0, 100) + '...');
     
     const connection = await connectDB();
@@ -384,7 +386,8 @@ app.get('/api/diagrams/:id', authenticateToken, async (req, res) => {
       if (!diagram.data.nodes) diagram.data.nodes = [];
       if (!diagram.data.edges) diagram.data.edges = [];
       
-      console.log('📊 Diagrama carregado:', diagram.name, 'com', diagram.data.nodes.length, 'nós');
+      console.log('📊 Diagrama carregado:', diagram.name, 'com', diagram.data.nodes.length, 'nós e', diagram.data.edges.length, 'edges');
+      console.log('🔗 Edges carregadas:', diagram.data.edges);
       console.log('👤 Acesso por:', req.user.email, '| Role:', req.user.role);
       
     } catch (e) {

@@ -36,46 +36,60 @@ export const useDiagramStore = create((set, get) => ({
   // Access Control state
   userPermissions: {},
   visibleTables: new Set(),
-  isOwner: false,
+  isOwner: true, // ⚠️ TEMPORÁRIO: Definir como true por padrão para debug
   hasAccess: true, // Por padrão, assume que tem acesso (será validado)
 
   // Getters que aplicam filtros de acesso
   getVisibleNodes: () => {
     const state = get();
+    const nodes = [...state.nodes]; // Cria uma cópia para evitar mutações
+    console.log('🔍 getVisibleNodes chamado - Total nodes:', nodes.length);
+    return nodes;
     
-    // Se é dono ou não há controle de acesso, mostrar tudo
+    // Código original comentado temporariamente
+    /*
     if (state.isOwner || !state.currentDiagramId) {
+      console.log('✅ Mostrando todos os nós (owner ou sem diagrama)');
       return state.nodes;
     }
 
-    // Se não tem acesso ao diagrama, não mostrar nada
     if (!state.hasAccess) {
+      console.log('❌ Sem acesso ao diagrama, escondendo todos os nós');
       return [];
     }
 
-    // Filtrar nós baseado nas permissões
-    return state.nodes.filter(node => {
-      // Se não tem classificação, mostrar (classificação padrão)
+    const filteredNodes = state.nodes.filter(node => {
       if (!node.data.classificationId) {
         return true;
       }
-
-      // Verificar permissão específica para a classificação
       const permission = state.userPermissions[node.data.classificationId];
       return permission && ['view', 'edit', 'admin'].includes(permission);
     });
+    
+    return filteredNodes;
+    */
   },
 
   getVisibleEdges: () => {
     const state = get();
+    console.log('🔗 getVisibleEdges - DEBUG MODE:', {
+      totalEdges: state.edges.length,
+      edges: state.edges,
+      retornando: 'TODAS as arestas (debug ativo)'
+    });
+    
+    return state.edges;
+    
+    // Código original comentado temporariamente
+    /*
     const visibleNodes = state.getVisibleNodes();
     const visibleNodeIds = visibleNodes.map(n => n.id);
 
-    // Filtrar arestas que conectam apenas nós visíveis
     return state.edges.filter(edge => 
       visibleNodeIds.includes(edge.source) && 
       visibleNodeIds.includes(edge.target)
     );
+    */
   },
 
   // Actions
@@ -121,41 +135,25 @@ export const useDiagramStore = create((set, get) => ({
   },
   
   onConnect: (connection) => {
+    console.log('🔄 [STORE] onConnect chamado:', connection);
     const { source, target, sourceHandle, targetHandle } = connection;
     
-    // Validações básicas
     if (!source || !target || source === target) {
+      console.log('❌ [STORE] Conexão inválida:', { source, target });
       return;
     }
-    
-    console.log('🔄 Processando nova conexão:', { source, target, sourceHandle, targetHandle });
-    
+
+    console.log('✅ [STORE] Processando conexão válida');
     const currentEdges = get().edges;
     
-    // ESTRATÉGIA: Substituir qualquer conexão existente entre os mesmos nós
-    // Buscar conexões existentes entre source e target (em qualquer direção)
-    const existingConnections = currentEdges.filter(edge => 
-      (edge.source === source && edge.target === target) ||
-      (edge.source === target && edge.target === source)
-    );
-    
-    if (existingConnections.length > 0) {
-      console.log(`🔄 Encontradas ${existingConnections.length} conexão(ões) existente(s) entre ${source} e ${target}`);
-      console.log('🗑️ Removendo conexões antigas para substituir...');
-      
-      // Remover conexões existentes
-      existingConnections.forEach(edge => {
-        console.log(`   - Removendo conexão: ${edge.id}`);
-      });
-    }
-    
-    // Filtrar edges removendo as conexões existentes entre esses nós
+    // Remove conexões existentes entre os mesmos nós
     const edgesWithoutExisting = currentEdges.filter(edge => 
       !((edge.source === source && edge.target === target) ||
         (edge.source === target && edge.target === source))
     );
+    console.log('🔗 [STORE] Edges filtrados:', edgesWithoutExisting.length, 'de', currentEdges.length);
     
-    // Criar nova conexão
+    // Cria nova conexão
     const newEdge = {
       id: `e${source}-${target}-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       source: source,
@@ -166,23 +164,28 @@ export const useDiagramStore = create((set, get) => ({
       animated: false,
       style: { 
         stroke: '#2196f3', 
-        strokeWidth: 3, // Usando strokeWidth 3 como no TypeScript
-        strokeDasharray: '5,5' // Usando padrão que funcionava
+        strokeWidth: 3,
+        strokeDasharray: '5,5'
       }
     };
+    console.log('✅ [STORE] Nova edge criada:', newEdge);
     
-    // Adicionar nova conexão aos edges filtrados
     const updatedEdges = [...edgesWithoutExisting, newEdge];
+    console.log('📊 [STORE] Total edges após atualização:', updatedEdges.length);
     
-    console.log('✅ Nova conexão criada (substituindo antigas):', newEdge.id);
-    console.log(`📊 Total de edges: ${currentEdges.length} → ${updatedEdges.length}`);
-    
+    console.log('🔄 [STORE] Atualizando estado...');
     set({
       edges: updatedEdges,
-      isConnecting: false,
-      connectionMode: false,
+      hasChanges: true,
       isDirty: true
     });
+    console.log('✅ [STORE] Estado atualizado com nova conexão');
+    
+    // Disparar auto-save após criar conexão
+    console.log('🔄 [STORE] Disparando auto-save após criar conexão...');
+    setTimeout(() => {
+      get().autoSave();
+    }, 100); // Pequeno delay para garantir que o estado foi atualizado
   },
   
   addNode: (position) => {
@@ -241,8 +244,16 @@ export const useDiagramStore = create((set, get) => ({
     
     console.log('✅ Nó criado com sucesso:', newNode.id);
     
+    const updatedNodes = [...existingNodes, newNode];
+    console.log('📊 Estado após criação:', {
+      nodesBefore: existingNodes.length,
+      nodesAfter: updatedNodes.length,
+      newNodeId: newNode.id,
+      newNodePosition: newNode.position
+    });
+    
     set({
-      nodes: [...existingNodes, newNode],
+      nodes: updatedNodes,
       lastNodeCreation: now,
       isDirty: true
     });
@@ -303,11 +314,23 @@ export const useDiagramStore = create((set, get) => ({
         position.y + nodeHeight < node.position.y
       );
       
+      if (overlap) {
+        console.log('🔍 SOBREPOSIÇÃO detectada com nó:', {
+          noExistente: { id: node.id, position: node.position, size: { width: nodeDataWidth, height: nodeDataHeight } },
+          novoNo: { position, size: { width: nodeWidth, height: nodeHeight } }
+        });
+      }
+      
       return overlap;
     });
     
     if (wouldOverlap) {
       console.log('⚠️ VALIDAÇÃO FALHOU: Novo nó sobreporia nó existente');
+      console.log('📊 Nós existentes que causaram sobreposição:', existingNodes.map(n => ({ 
+        id: n.id, 
+        position: n.position,
+        visible: 'verificar getVisibleNodes()'
+      })));
       return null;
     }
     
@@ -524,11 +547,33 @@ export const useDiagramStore = create((set, get) => ({
 
   // Carregar diagrama específico do banco
   loadDiagramFromDB: async (diagramId) => {
+    console.log('📂 Carregando diagrama do banco...', diagramId);
     set({ isLoading: true });
     try {
       const result = await loadDiagram(diagramId);
+      console.log('📦 Resultado do loadDiagram:', result);
+      
       if (result.success && result.diagram) {
         const { data, name, id } = result.diagram;
+        
+        console.log('📊 Dados do diagrama carregados:', {
+          nome: name,
+          id: id,
+          nodes: data.nodes?.length || 0,
+          edges: data.edges?.length || 0
+        });
+        
+        // Carregar permissões do usuário para este diagrama primeiro
+        await get().loadUserPermissions(id);
+        
+        // DEBUG: Verificar os dados antes de definir
+        console.log('🔧 DEBUG EDGES - Antes de set():', {
+          dataEdges: data.edges,
+          dataEdgesLength: data.edges?.length,
+          dataNodes: data.nodes?.length
+        });
+
+        // Depois atualizar o estado uma única vez
         set({
           nodes: data.nodes || [],
           edges: data.edges || [],
@@ -539,11 +584,16 @@ export const useDiagramStore = create((set, get) => ({
           isLoading: false,
           selectedElements: []
         });
+
+        // DEBUG: Verificar o estado após set()
+        const newState = get();
+        console.log('🔧 DEBUG EDGES - Após set():', {
+          stateEdges: newState.edges,
+          stateEdgesLength: newState.edges?.length,
+          stateNodes: newState.nodes?.length
+        });
         
-        // Carregar permissões do usuário para este diagrama
-        await get().loadUserPermissions(id);
-        
-        console.log(`✅ Diagrama "${name}" carregado com sucesso`);
+        console.log(`✅ Diagrama "${name}" carregado com sucesso - ${data.nodes?.length || 0} nós e ${data.edges?.length || 0} conexões`);
         return { success: true, diagram: result.diagram };
       } else {
         console.error('❌ Erro ao carregar diagrama:', result.error);
@@ -561,6 +611,13 @@ export const useDiagramStore = create((set, get) => ({
   saveDiagramToDB: async (name) => {
     const state = get();
     const { nodes, edges, currentDiagramId } = state;
+    
+    console.log('💾 [SAVE] Salvando diagrama:', { 
+      name, 
+      currentDiagramId, 
+      nodesCount: nodes.length, 
+      edgesCount: edges.length 
+    });
     
     if (!name || !name.trim()) {
       return { success: false, error: 'Nome do diagrama é obrigatório' };
@@ -609,19 +666,29 @@ export const useDiagramStore = create((set, get) => ({
   // Auto-save (save silencioso)
   autoSave: async () => {
     const state = get();
-    const { autoSaveEnabled, isDirty, currentDiagramId, diagramName } = state;
+    const { autoSaveEnabled, isDirty, currentDiagramId, diagramName, nodes, edges } = state;
+    
+    console.log('🔄 [AUTO-SAVE] Estado atual:', { 
+      autoSaveEnabled, 
+      isDirty, 
+      currentDiagramId, 
+      diagramName,
+      nodesCount: nodes.length,
+      edgesCount: edges.length
+    });
     
     if (!autoSaveEnabled || !isDirty || !currentDiagramId) {
+      console.log('🔄 [AUTO-SAVE] Condições não atendidas - cancelando auto-save');
       return;
     }
 
-    console.log('🔄 Auto-save executando...');
+    console.log('🔄 [AUTO-SAVE] Executando auto-save...', { diagramName, edgesCount: edges.length });
     const result = await get().saveDiagramToDB(diagramName);
     
     if (result.success) {
-      console.log('✅ Auto-save concluído');
+      console.log('✅ [AUTO-SAVE] Auto-save concluído com sucesso');
     } else {
-      console.error('❌ Erro no auto-save:', result.error);
+      console.error('❌ [AUTO-SAVE] Erro no auto-save:', result.error);
     }
   },
 
@@ -698,28 +765,67 @@ export const useDiagramStore = create((set, get) => ({
         return { success: false, error: 'Token não encontrado' };
       }
 
-      const response = await fetch(`http://localhost:3001/api/diagrams/${diagramId}/my-permissions`, {
+      // Verificar acesso geral ao diagrama
+      const response = await fetch(`http://localhost:3001/api/diagrams/${diagramId}/access`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
 
-      console.log('🔐 Resposta da API my-permissions:', { status: response.status, ok: response.ok });
+      console.log('🔐 Resposta da API access:', { status: response.status, ok: response.ok });
 
       if (response.ok) {
         const data = await response.json();
+        
+        // Se tem acesso, carregar também as classificações para saber quais tabelas pode ver
+        let classificationPermissions = {};
+        
+        if (data.success) {
+          // Carregar classificações do diagrama
+          const classResponse = await fetch(`http://localhost:3001/api/diagrams/${diagramId}/classifications`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (classResponse.ok) {
+            const classData = await classResponse.json();
+            
+            if (classData.success && classData.classifications) {
+              // Para cada classificação, assumir permissão baseada no nível de acesso do usuário
+              classData.classifications.forEach(classification => {
+                if (data.isOwner || data.accessLevel === 'admin') {
+                  classificationPermissions[classification.id] = 'admin';
+                } else if (data.accessLevel === 'edit') {
+                  classificationPermissions[classification.id] = 'edit';
+                } else if (data.accessLevel === 'view') {
+                  classificationPermissions[classification.id] = 'view';
+                }
+              });
+            }
+          }
+        }
+
         set({
-          userPermissions: data.permissions || {},
-          visibleTables: new Set(data.visibleTables || []),
+          userPermissions: classificationPermissions,
+          visibleTables: new Set(), // Por enquanto, controlar por classificação
           isOwner: data.isOwner || false,
-          hasAccess: data.hasAccess || false
+          hasAccess: data.success || false
         });
-        console.log('✅ Permissões do usuário carregadas:', data);
+        
+        console.log('✅ Permissões do usuário carregadas:', {
+          isOwner: data.isOwner,
+          hasAccess: data.success,
+          accessLevel: data.accessLevel,
+          classificationPermissions
+        });
+        
         return { success: true, data };
       } else {
         const errorData = await response.json();
-        console.error('❌ Erro ao carregar permissões:', errorData.error);
+        console.error('❌ Erro ao carregar acesso ao diagrama:', errorData.error);
         set({
           userPermissions: {},
           visibleTables: new Set(),
@@ -797,13 +903,16 @@ export const useDiagramStore = create((set, get) => ({
 
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch(`http://localhost:3001/api/diagrams/${state.currentDiagramId}/tables/${tableNodeId}/classification`, {
+      const response = await fetch(`http://localhost:3001/api/tables/${tableNodeId}/classification`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ classificationId })
+        body: JSON.stringify({ 
+          classificationId: classificationId,
+          diagramId: state.currentDiagramId
+        })
       });
 
       if (response.ok) {

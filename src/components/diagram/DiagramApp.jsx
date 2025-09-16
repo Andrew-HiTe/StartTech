@@ -3,7 +3,7 @@
  * Contém o ReactFlow, toolbar, sidebar e funcionalidades de edição
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import {
   ReactFlow,
   Background,
@@ -36,6 +36,7 @@ function DiagramFlow({ isSidebarMinimized, setIsSidebarMinimized }) {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStartPos, setDragStartPos] = useState(null);
   const [previewNode, setPreviewNode] = useState(null);
+  const [cachedNodes, setCachedNodes] = useState([]); // Cache local para estabilizar nós
   
   // Sistema de notificações
   const { toasts, removeToast, showSuccess, showWarning, showError, showInfo } = useToast();
@@ -60,12 +61,71 @@ function DiagramFlow({ isSidebarMinimized, setIsSidebarMinimized }) {
     setDiagramName,
     getVisibleNodes,
     getVisibleEdges,
-    hasAccess
+    hasAccess,
+    edges: storeEdges // Renomear para evitar conflito
   } = useDiagramStore();
 
   // Debug: mostrar currentTool e hasAccess
   console.log('🔧 Current tool:', currentTool);
   console.log('🔐 HasAccess:', hasAccess, 'Current diagram ID:', currentDiagramId);
+  
+  // ⚠️ SOLUÇÃO DIRETA: Obter nós uma única vez com verificação de estabilidade e cache
+  console.log('🔧 SOLUÇÃO DIRETA - Criando allNodes...');
+  const directNodes = getVisibleNodes();
+  
+  // Verificação adicional para garantir consistência
+  if (!Array.isArray(directNodes)) {
+    console.warn('⚠️ getVisibleNodes retornou valor inválido:', directNodes);
+    return <div>Carregando...</div>;
+  }
+  
+  // Atualizar cache apenas se há mudança real nos nós
+  useEffect(() => {
+    if (directNodes.length > 0 && JSON.stringify(directNodes) !== JSON.stringify(cachedNodes)) {
+      console.log('� Atualizando cache de nós:', directNodes.length);
+      setCachedNodes([...directNodes]);
+    }
+  }, [directNodes.length, currentDiagramId]);
+  
+  // Usar nós do cache se disponível e directNodes estiver vazio
+  const stableNodes = directNodes.length > 0 ? directNodes : cachedNodes;
+  
+  console.log('�🐛 FORCE DEBUG - getVisibleNodes():', directNodes.length, 'cached:', cachedNodes.length, 'using:', stableNodes.length);
+  const allNodes = previewNode ? [...stableNodes, previewNode] : stableNodes;
+  console.log('✅ SOLUÇÃO DIRETA - allNodes criado:', allNodes.length, 'nós');
+
+  // Efeito para centralizar visualização quando nós mudarem
+  useEffect(() => {
+    if (allNodes.length > 0 && reactFlowInstance) {
+      // Pequeno delay para garantir que os nós foram renderizados
+      const timer = setTimeout(() => {
+        reactFlowInstance.fitView({
+          padding: 0.2,
+          includeHiddenNodes: false,
+          minZoom: 0.5,
+          maxZoom: 1.5,
+          duration: 800
+        });
+        console.log('🎯 Viewport centralizada automaticamente para', allNodes.length, 'nós');
+      }, 200);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [allNodes.length, reactFlowInstance]);
+
+  // Função para centralizar visualização manualmente
+  const handleCenterView = useCallback(() => {
+    if (allNodes.length > 0 && reactFlowInstance) {
+      reactFlowInstance.fitView({
+        padding: 0.2,
+        includeHiddenNodes: false,
+        minZoom: 0.5,
+        maxZoom: 1.5,
+        duration: 800
+      });
+      console.log('🎯 Viewport centralizada manualmente para', allNodes.length, 'nós');
+    }
+  }, [allNodes.length, reactFlowInstance]);
 
   // Função integrada para atualizar nome do diagrama
   const handleDiagramNameChange = useCallback((name) => {
@@ -95,6 +155,7 @@ function DiagramFlow({ isSidebarMinimized, setIsSidebarMinimized }) {
   const handleConnect = useCallback(
     (connection) => {
       console.log('🔗 handleConnect chamado:', connection);
+      console.log('🔗 onConnect function:', typeof onConnect, onConnect);
       
       // Verificar se existe conexão anterior entre esses nós
       const { source, target } = connection;
@@ -103,8 +164,10 @@ function DiagramFlow({ isSidebarMinimized, setIsSidebarMinimized }) {
         (edge.source === target && edge.target === source)
       );
       
+      console.log('🔗 Chamando onConnect da store...');
       // Chamar a função do store que já faz a substituição
       onConnect(connection);
+      console.log('✅ onConnect da store chamado');
       
       // Mostrar notificação apropriada
       if (existingConnections.length > 0) {
@@ -454,15 +517,32 @@ function DiagramFlow({ isSidebarMinimized, setIsSidebarMinimized }) {
   }, [currentTool]);
 
   // Combinar nós com preview, aplicando filtros de acesso
+  // COMENTADO TEMPORARIAMENTE para debug
+  /*
   const allNodes = useMemo(() => {
     const visibleNodes = getVisibleNodes();
-    return previewNode ? [...visibleNodes, previewNode] : visibleNodes;
+    console.log('🔄 Recalculando allNodes:', {
+      visibleNodes: visibleNodes.length,
+      previewNode: previewNode ? 1 : 0,
+      total: visibleNodes.length + (previewNode ? 1 : 0),
+      detalhesVisibleNodes: visibleNodes.map(n => ({ id: n.id, type: n.type })),
+      previewNodeDetails: previewNode ? { id: previewNode.id, type: previewNode.type } : null
+    });
+    
+    const result = previewNode ? [...visibleNodes, previewNode] : visibleNodes;
+    console.log('✅ allNodes final:', result.length, 'nós');
+    return result;
   }, [getVisibleNodes, previewNode]);
+  */
+  
+  // ⚠️ REMOVIDO - agora allNodes é definido acima
 
   // Obter arestas visíveis
   const visibleEdges = useMemo(() => {
-    return getVisibleEdges();
-  }, [getVisibleEdges]);
+    const edges = getVisibleEdges();
+    console.log('🔗 visibleEdges recalculado:', edges.length, edges);
+    return edges;
+  }, [getVisibleEdges, storeEdges]); // Usar storeEdges como dependência
 
   // Verificar se usuário tem acesso ao diagrama
   if (!hasAccess) {
@@ -515,6 +595,13 @@ function DiagramFlow({ isSidebarMinimized, setIsSidebarMinimized }) {
               onSelectionChange={handleSelectionChange}
               connectionMode={ConnectionMode.Loose}
               defaultViewport={{ x: 0, y: 0, zoom: 0.9 }}
+              fitView={true}
+              fitViewOptions={{
+                padding: 0.2,
+                includeHiddenNodes: false,
+                minZoom: 0.5,
+                maxZoom: 1.5
+              }}
               snapToGrid={false}
               snapGrid={[1, 1]}
               defaultEdgeOptions={{
@@ -522,8 +609,8 @@ function DiagramFlow({ isSidebarMinimized, setIsSidebarMinimized }) {
                 animated: false,
                 style: { stroke: '#2196f3', strokeWidth: 3 },
               }}
-              connectionRadius={30}
-              connectOnClick={false}
+              connectionRadius={50}
+              connectOnClick={true}
               connectionLineType={ConnectionLineType.SmoothStep}
               connectionLineStyle={{ stroke: '#2196f3', strokeWidth: 3, strokeDasharray: '5,5' }}
               elevateNodesOnSelect={true}
@@ -572,7 +659,7 @@ function DiagramFlow({ isSidebarMinimized, setIsSidebarMinimized }) {
               />
               
               <Panel position="bottom-center">
-                <Toolbar />
+                <Toolbar onCenterView={handleCenterView} />
               </Panel>
             </ReactFlow>
         </div>
