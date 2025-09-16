@@ -25,3 +25,36 @@ dist-ssr
 
 # Environment files
 backend/.env
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Database backups and scripts
+*.sql
+backup_*.sql
+export_banco.ps1
+
+# Temporary files
+excluir.*
+temp/
+tmp/
+
+# Backup files
+*_backup.*
+*_old.*
+*_new.*
+*_test.*
+*_final.*
+*_fixed.*
+*_simple.*
+
+# Duplicate projects
+StartTech2/
+StartTech*/
+
+# Documentation temp files
+GUIA_*.md
+LAYOUT_*.md
+MIGRATION_*.md
