@@ -284,20 +284,26 @@ AuditLog (id, user_id, action, entity_type, entity_id, timestamp)
 - [**Guia de Contribuição**](./docs/TEMPLATES.md)
 - [**Troubleshooting**](./docs/ERROR_HANDLING_GUIDE.md)
 
-## 👨‍💻 Autor
+## 👨‍💻 Autores
 
 **Andrew** - *Desenvolvimento Fullstack*
 - GitHub: [@Andrew-HiTe](https://github.com/Andrew-HiTe)
 - Projeto: [StartTech](https://github.com/Andrew-HiTe/StartTech)
+
+**Nicolas** - *Desenvolvimento Fullstack*
+- GitHub: [@Nick-Almeida](https://github.com/Nick-Almeida)
+
+**Amanda** - *Desenvolvimento Fullstack*
+- GitHub: [@amandamarina](https://github.com/amandamarina)
+
+**Cauã** - *Arquiteto de Cloud*
+- GitHub: [@cauasls](https://github.com/cauasls)
+
+**Gustavo** - *Desenvolvimento Fullstack*
+- GitHub: [@Gustavo](https://github.com/Guxtavo2002)
 
 ## 📄 Licença
 
 Este projeto foi desenvolvido como projeto final da **Imersão Start-Tech edição Cloud**.
 
 ---
-
-<div align="center">
-
-**⭐ Não esqueça de dar uma estrela se este projeto te ajudou!**
-
-</div>
