@@ -1,4 +1,4 @@
-# 🎯 StartTech - Sistema de Diagramas Inteligentes
+# 🎯 T-DRAW - Sistema de Diagramas Inteligentes
 
 > **Projeto de finalização da imersão Start-Tech edição Cloud**
 
@@ -12,7 +12,7 @@ Um sistema completo para criação, edição e gerenciamento colaborativo de dia
 
 ## 📋 Sobre o Projeto
 
-O **StartTech** é uma plataforma web completa para criação e gerenciamento de diagramas arquiteturais, especialmente focada no modelo C4 (Context, Containers, Components, Code). O sistema oferece uma interface intuitiva para desenhar diagramas, gerenciar projetos e colaborar em equipe.
+O **T-DRAW** é uma aplicação web para criação, edição e gerenciamento de diagramas (ex.: modelos de dados / estruturas lógicas) com foco em persistência, segurança de dados e futura colaboração.
 
 ### 🎯 Características Principais
 
