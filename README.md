@@ -144,26 +144,6 @@ Frontend: http://localhost:5173
 Backend API: http://localhost:3001
 ```
 
-### 🔐 Configuração do Ambiente
-
-Crie um arquivo `.env` na pasta `backend/`:
-
-```env
-# Banco de dados
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=sua_senha_mysql
-DB_NAME=starttech_db
-
-# JWT
-JWT_SECRET=seu_jwt_secret_super_seguro
-JWT_EXPIRES_IN=24h
-
-# Servidor
-PORT=3001
-NODE_ENV=development
-```
-
 ## 📖 Como Usar
 
 ### 1. **Acesso Inicial**
@@ -187,40 +167,6 @@ NODE_ENV=development
 ### 4. **Exportação**
 - Use o botão "Export" na toolbar
 - Escolha formato (JSON, PNG, SVG)
-- Faça download ou compartilhe
-
-## 🎨 Capturas de Tela
-
-*(Adicione screenshots da aplicação aqui)*
-
-## 🚧 Roadmap
-
-- [ ] **v2.0**: Colaboração em tempo real (WebSockets)
-- [ ] **v2.1**: Templates de diagramas pré-definidos
-- [ ] **v2.2**: Integração com Git para versionamento
-- [ ] **v2.3**: API REST pública
-- [ ] **v2.4**: Mobile app (React Native)
-- [ ] **v2.5**: IA para sugestões de arquitetura
-
-## 🤝 Contribuição
-
-Contribuições são sempre bem-vindas! Veja como:
-
-1. **Fork** o projeto
-2. **Crie** uma branch (`git checkout -b feature/AmazingFeature`)
-3. **Commit** suas mudanças (`git commit -m 'Add: AmazingFeature'`)
-4. **Push** para a branch (`git push origin feature/AmazingFeature`)
-5. **Abra** um Pull Request
-
-### 📝 Convenções de Commit
-
-- `feat:` Nova funcionalidade
-- `fix:` Correção de bug
-- `docs:` Documentação
-- `style:` Formatação
-- `refactor:` Refatoração
-- `test:` Testes
-- `chore:` Manutenção
 
 ## 📄 Scripts Disponíveis
 
